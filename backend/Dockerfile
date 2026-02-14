@@ -24,8 +24,8 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # Copy app source
 COPY . .
 
-# Install PHP dependencies
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+# Install PHP dependencies without framework scripts during build
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev --no-scripts
 
 # Laravel runtime prep
 RUN mkdir -p storage/logs bootstrap/cache \
@@ -34,4 +34,4 @@ RUN mkdir -p storage/logs bootstrap/cache \
 EXPOSE 10000
 
 # Render sets PORT at runtime; default to 10000 for local container runs
-CMD ["sh", "-c", "php artisan config:clear && php artisan route:clear && php artisan serve --host=0.0.0.0 --port=${PORT:-10000}"]
+CMD ["sh", "-c", "php artisan package:discover --ansi && php artisan config:clear && php artisan route:clear && php artisan serve --host=0.0.0.0 --port=${PORT:-10000}"]
