@@ -1,4 +1,23 @@
+import { useState } from 'react';
+import api from '../services/api';
+
 function InvoiceTable({ invoices }) {
+  const [openingPdfId, setOpeningPdfId] = useState(null);
+
+  const handleOpenPdf = async (invoice) => {
+    setOpeningPdfId(invoice.id);
+    try {
+      const response = await api.get(`/invoices/${invoice.id}/pdf`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      window.open(url, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    } catch (error) {
+      window.alert(error?.response?.data?.message || 'Unable to open invoice PDF right now.');
+    } finally {
+      setOpeningPdfId(null);
+    }
+  };
+
   return (
     <div className="panel">
       <table className="table">
@@ -29,9 +48,14 @@ function InvoiceTable({ invoices }) {
                 <td>NLe {Number(invoice.total).toFixed(2)}</td>
                 <td>
                   {invoice.pdf_path ? (
-                    <a href={`${import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:8000'}/${invoice.pdf_path}`} target="_blank" rel="noreferrer">
-                      Open
-                    </a>
+                    <button
+                      type="button"
+                      className="table-action-link"
+                      onClick={() => handleOpenPdf(invoice)}
+                      disabled={openingPdfId === invoice.id}
+                    >
+                      {openingPdfId === invoice.id ? 'Opening...' : 'Open'}
+                    </button>
                   ) : (
                     '-'
                   )}

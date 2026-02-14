@@ -10,6 +10,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class InvoiceController extends Controller
 {
@@ -131,9 +132,32 @@ class InvoiceController extends Controller
             'message' => 'Invoice created successfully.',
             'data' => [
                 ...$invoice->toArray(),
-                'pdf_url' => $invoice->pdf_path ? url($invoice->pdf_path) : null,
+                'pdf_url' => url('/api/invoices/'.$invoice->id.'/pdf'),
             ],
         ], 201);
+    }
+
+    public function pdf(Invoice $invoice): BinaryFileResponse|JsonResponse
+    {
+        if (! $invoice->pdf_path) {
+            return response()->json(['message' => 'Invoice PDF is not available.'], 404);
+        }
+
+        $relativePath = str_starts_with($invoice->pdf_path, 'storage/')
+            ? substr($invoice->pdf_path, strlen('storage/'))
+            : ltrim($invoice->pdf_path, '/');
+
+        if (! Storage::disk('public')->exists($relativePath)) {
+            return response()->json(['message' => 'Invoice PDF file was not found on the server.'], 404);
+        }
+
+        $filename = 'invoice-'.$invoice->invoice_number.'.pdf';
+
+        return response()->file(Storage::disk('public')->path($relativePath), [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$filename.'"',
+            'Cache-Control' => 'private, max-age=0, must-revalidate',
+        ]);
     }
 
     public function show(Invoice $invoice): JsonResponse

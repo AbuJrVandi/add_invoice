@@ -12,6 +12,7 @@ function CreateInvoice() {
   const [formDraft, setFormDraft] = useState(null);
   const [draftInvoice, setDraftInvoice] = useState(null);
   const [createdInvoice, setCreatedInvoice] = useState(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -47,7 +48,11 @@ function CreateInvoice() {
 
     try {
       const response = await api.post('/invoices', draftInvoice);
-      setCreatedInvoice(response.data?.data ?? null);
+      const created = response.data?.data ?? null;
+      setCreatedInvoice(created);
+      if (created?.id) {
+        await handleDownloadPdf(created.id, created.invoice_number);
+      }
     } catch (err) {
       if (err?.response?.status === 401) {
         setError('Your session expired. Please log in again.');
@@ -59,22 +64,65 @@ function CreateInvoice() {
     }
   };
 
-  if (createdInvoice) {
-    const backendBase = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:8000';
-    const pdfUrl = createdInvoice.pdf_url || (createdInvoice.pdf_path ? `${backendBase}/${createdInvoice.pdf_path}` : null);
+  const fetchPdfBlobUrl = async (invoiceId) => {
+    const response = await api.get(`/invoices/${invoiceId}/pdf`, { responseType: 'blob' });
+    return window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+  };
 
+  const handleDownloadPdf = async (invoiceId, invoiceNumber) => {
+    setPdfLoading(true);
+    try {
+      const url = await fetchPdfBlobUrl(invoiceId);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice-${invoiceNumber || invoiceId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Unable to download invoice PDF right now.');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const handleOpenCreatedPdf = async () => {
+    if (!createdInvoice?.id) return;
+
+    setPdfLoading(true);
+    try {
+      const url = await fetchPdfBlobUrl(createdInvoice.id);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Unable to open invoice PDF right now.');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const handleDownloadCreatedPdf = async () => {
+    if (!createdInvoice?.id) return;
+
+    await handleDownloadPdf(createdInvoice.id, createdInvoice.invoice_number);
+  };
+
+  if (createdInvoice) {
     return (
       <div className="stacked">
         <h2>Create Invoice</h2>
+        {error ? <p className="error panel">{error}</p> : null}
         <div className="panel success-card">
           <h3>Invoice Saved Successfully</h3>
-          <p>Invoice <strong>{createdInvoice.invoice_number}</strong> has been created and PDF is ready.</p>
+          <p>Invoice <strong>{createdInvoice.invoice_number}</strong> has been created and PDF has been downloaded.</p>
           <div className="success-actions">
-            {pdfUrl ? (
-              <a href={pdfUrl} className="button" target="_blank" rel="noreferrer">
-                Download PDF
-              </a>
-            ) : null}
+            <button type="button" className="button" onClick={handleOpenCreatedPdf} disabled={pdfLoading}>
+              {pdfLoading ? 'Preparing PDF...' : 'View PDF'}
+            </button>
+            <button type="button" className="button button-outline" onClick={handleDownloadCreatedPdf} disabled={pdfLoading}>
+              {pdfLoading ? 'Preparing PDF...' : 'Download Again'}
+            </button>
             <button type="button" className="button button-outline" onClick={() => navigate('/invoices')}>
               Go to Invoices
             </button>

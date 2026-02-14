@@ -19,6 +19,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/invoices/next-number', [InvoiceController::class, 'nextNumber']);
     Route::get('/invoices', [InvoiceController::class, 'index']);
     Route::post('/invoices', [InvoiceController::class, 'store']);
+    Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'pdf']);
     Route::get('/invoices/{invoice}', [InvoiceController::class, 'show']);
     Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy']);
 });
