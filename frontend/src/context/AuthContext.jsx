@@ -5,13 +5,27 @@ import api from '../services/api';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(localStorage.getItem('ims_token'));
-  const [user, setUser] = useState(() => {
-    const raw = localStorage.getItem('ims_user');
-    return raw ? JSON.parse(raw) : null;
-  });
+  const [token, setToken] = useState(null);
+  const [user, setUser] = useState(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    const storedToken = localStorage.getItem('ims_token');
+    const rawUser = localStorage.getItem('ims_user');
+
+    setToken(storedToken);
+
+    if (rawUser) {
+      try {
+        setUser(JSON.parse(rawUser));
+      } catch {
+        localStorage.removeItem('ims_user');
+        setUser(null);
+      }
+    }
+
+    setReady(true);
+
     const clearSession = () => {
       setToken(null);
       setUser(null);
@@ -44,8 +58,8 @@ export function AuthProvider({ children }) {
   };
 
   const value = useMemo(
-    () => ({ token, user, login, logout }),
-    [token, user]
+    () => ({ token, user, ready, login, logout }),
+    [token, user, ready]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

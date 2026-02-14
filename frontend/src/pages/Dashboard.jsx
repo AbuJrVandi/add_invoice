@@ -44,26 +44,28 @@ function Dashboard() {
 
       <section className="panel">
         <h3>Recent Invoices</h3>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Invoice #</th>
-              <th>Customer</th>
-              <th>Organization</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.recent_invoices.map((invoice) => (
-              <tr key={invoice.id}>
-                <td>{invoice.invoice_number}</td>
-                <td>{invoice.customer_name}</td>
-                <td>{invoice.organization}</td>
-                <td>NLe {Number(invoice.total).toFixed(2)}</td>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Invoice #</th>
+                <th>Customer</th>
+                <th>Organization</th>
+                <th>Total</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.recent_invoices.map((invoice) => (
+                <tr key={invoice.id}>
+                  <td>{invoice.invoice_number}</td>
+                  <td>{invoice.customer_name}</td>
+                  <td>{invoice.organization}</td>
+                  <td>NLe {Number(invoice.total).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );

@@ -8,7 +8,11 @@ import ProtectedLayout from './layouts/ProtectedLayout';
 import { useAuth } from './context/AuthContext';
 
 function App() {
-  const { token } = useAuth();
+  const { token, ready } = useAuth();
+
+  if (!ready) {
+    return <div className="centered-page loading-screen">Loading workspace...</div>;
+  }
 
   return (
     <Routes>

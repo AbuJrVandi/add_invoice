@@ -69,35 +69,69 @@ textarea {
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.06);
 }
 
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .sidebar h1 {
   font-size: 20px;
   margin: 0;
 }
 
-.sidebar nav {
+.sidebar-nav {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.sidebar nav a {
+.sidebar-nav a {
   color: #d7e1ff;
   padding: 11px 10px;
   border-radius: 10px;
   font-weight: 600;
+  transition: background-color 0.18s ease, color 0.18s ease;
 }
 
-.sidebar nav a.active {
+.sidebar-nav a.active {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
+}
+
+.sidebar-toggle {
+  display: none;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #dbe7ff;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .sidebar-footer {
   margin-top: auto;
 }
 
+.sidebar-footer p {
+  margin: 0 0 10px;
+  color: #c6d6ff;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
 .content {
   padding: 28px;
+}
+
+.loading-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  color: #334155;
+  font-weight: 700;
 }
 
 .panel {
@@ -160,11 +194,16 @@ textarea {
   border-collapse: collapse;
 }
 
+.table-wrap {
+  overflow-x: auto;
+}
+
 .table th,
 .table td {
   border-bottom: 1px solid #e9eef7;
   padding: 10px;
   text-align: left;
+  white-space: nowrap;
 }
 
 .table-action-link {
@@ -499,7 +538,55 @@ textarea {
   .sidebar {
     position: sticky;
     top: 0;
-    z-index: 20;
+    z-index: 30;
+    padding: 14px 16px;
+    gap: 10px;
+    box-shadow: 0 8px 24px rgba(7, 13, 28, 0.2);
+  }
+
+  .sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .sidebar-nav,
+  .sidebar-footer {
+    display: none;
+  }
+
+  .sidebar.open .sidebar-nav,
+  .sidebar.open .sidebar-footer {
+    display: flex;
+  }
+
+  .sidebar.open .sidebar-nav {
+    padding-top: 6px;
+  }
+
+  .sidebar.open .sidebar-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    padding-top: 12px;
+    margin-top: 2px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .sidebar.open .sidebar-footer .button {
+    width: 100%;
+  }
+
+  .content {
+    padding: 16px;
+  }
+
+  .panel {
+    border-radius: 14px;
+    padding: 16px;
+  }
+
+  .table {
+    min-width: 720px;
   }
 
   .stats-grid,
@@ -526,5 +613,29 @@ textarea {
 
   .auth-options {
     justify-content: flex-start;
+  }
+
+  .filter-actions {
+    justify-content: stretch;
+  }
+
+  .filter-actions .button {
+    width: 100%;
+  }
+
+  .success-actions .button {
+    width: 100%;
+  }
+
+  .totals-box {
+    justify-content: flex-start;
+  }
+
+  .item-row {
+    margin-bottom: 14px;
+    padding: 12px;
+    border: 1px solid #e6ebf5;
+    border-radius: 12px;
+    background: #fafcff;
   }
 }
