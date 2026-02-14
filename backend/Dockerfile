@@ -2,11 +2,14 @@ FROM php:8.3-cli
 
 WORKDIR /var/www/html
 
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
 # System packages + PHP extensions required by Laravel + PostgreSQL
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
     libcurl4-openssl-dev \
+    libicu-dev \
     libonig-dev \
     libxml2-dev \
     libpng-dev \
@@ -15,7 +18,7 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     libzip-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install curl gd mbstring pdo pdo_pgsql xml zip \
+    && docker-php-ext-install bcmath curl gd intl mbstring pdo pdo_pgsql xml zip \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
@@ -25,7 +28,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 COPY . .
 
 # Install PHP dependencies without framework scripts during build
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev --no-scripts
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev --no-scripts --ignore-platform-reqs
 
 # Laravel runtime prep
 RUN mkdir -p storage/logs bootstrap/cache \
