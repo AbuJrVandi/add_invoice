@@ -6,20 +6,21 @@ WORKDIR /var/www/html
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
+    libonig-dev \
+    libxml2-dev \
     libpq-dev \
     libzip-dev \
-    && docker-php-ext-install pdo pdo_pgsql zip \
+    && docker-php-ext-install mbstring pdo pdo_pgsql xml zip \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Install PHP dependencies first (better layer caching)
-COPY composer.json composer.lock ./
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
-
 # Copy app source
 COPY . .
+
+# Install PHP dependencies
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
 
 # Laravel runtime prep
 RUN mkdir -p storage/logs bootstrap/cache \
