@@ -6,11 +6,16 @@ WORKDIR /var/www/html
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
+    libcurl4-openssl-dev \
     libonig-dev \
     libxml2-dev \
+    libpng-dev \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
     libpq-dev \
     libzip-dev \
-    && docker-php-ext-install mbstring pdo pdo_pgsql xml zip \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install curl gd mbstring pdo pdo_pgsql xml zip \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
