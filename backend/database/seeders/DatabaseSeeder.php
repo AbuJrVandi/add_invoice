@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -19,7 +20,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@invoicesystem.com',
         ], [
             'name' => 'Administrator',
-            'password' => 'password',
+            'password' => Hash::make('password'),
         ]);
     }
 }
