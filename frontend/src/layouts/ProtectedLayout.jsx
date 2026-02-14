@@ -1,10 +1,8 @@
-import { useState } from 'react';
 import { Navigate, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 function ProtectedLayout() {
   const { token, logout, user, ready } = useAuth();
-  const [menuOpen, setMenuOpen] = useState(false);
 
   if (!ready) {
     return <div className="content loading-screen">Loading workspace...</div>;
@@ -16,24 +14,17 @@ function ProtectedLayout() {
 
   return (
     <div className="app-shell">
-      <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
+      <aside className="sidebar">
         <div className="sidebar-head">
           <h1>Invoice System</h1>
-          <button
-            type="button"
-            className="sidebar-toggle"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((prev) => !prev)}
-          >
-            {menuOpen ? 'Close' : 'Menu'}
-          </button>
+          <button type="button" onClick={logout} className="sidebar-logout">Log out</button>
         </div>
 
         <nav className="sidebar-nav">
-          <NavLink to="/" onClick={() => setMenuOpen(false)}>Dashboard</NavLink>
-          <NavLink to="/invoices" onClick={() => setMenuOpen(false)}>Invoices</NavLink>
-          <NavLink to="/invoices/create" onClick={() => setMenuOpen(false)}>Create Invoice</NavLink>
-          <NavLink to="/pdf-settings" onClick={() => setMenuOpen(false)}>PDF Settings</NavLink>
+          <NavLink to="/">Dashboard</NavLink>
+          <NavLink to="/invoices">Invoices</NavLink>
+          <NavLink to="/invoices/create">Create Invoice</NavLink>
+          <NavLink to="/pdf-settings">PDF Settings</NavLink>
         </nav>
 
         <div className="sidebar-footer">

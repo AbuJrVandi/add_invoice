@@ -81,6 +81,17 @@ textarea {
   margin: 0;
 }
 
+.sidebar-logout {
+  display: none;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #dbe7ff;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .sidebar-nav {
   display: flex;
   flex-direction: column;
@@ -98,17 +109,6 @@ textarea {
 .sidebar-nav a.active {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
-}
-
-.sidebar-toggle {
-  display: none;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  color: #dbe7ff;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  padding: 8px 12px;
-  font-weight: 700;
-  cursor: pointer;
 }
 
 .sidebar-footer {
@@ -213,6 +213,7 @@ textarea {
   cursor: pointer;
   font-weight: 600;
   padding: 0;
+  text-decoration: none;
 }
 
 .table-action-link:disabled {
@@ -220,9 +221,14 @@ textarea {
   cursor: not-allowed;
 }
 
+.table-action-link:hover {
+  text-decoration: underline;
+}
+
 .empty-cell {
   text-align: center;
   color: #6b7280;
+  margin: 0;
 }
 
 .centered-page {
@@ -518,6 +524,36 @@ textarea {
   background: #fff;
 }
 
+.pdf-viewer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pdf-viewer-head h2 {
+  margin: 0;
+}
+
+.pdf-viewer-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pdf-viewer-panel {
+  padding: 10px;
+}
+
+.pdf-viewer-frame {
+  width: 100%;
+  height: 75vh;
+  border: 1px solid #dbe3f2;
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
 @keyframes auth-rise {
   from {
     opacity: 0;
@@ -539,41 +575,52 @@ textarea {
     position: sticky;
     top: 0;
     z-index: 30;
-    padding: 14px 16px;
-    gap: 10px;
+    padding: 10px 12px;
+    gap: 8px;
     box-shadow: 0 8px 24px rgba(7, 13, 28, 0.2);
   }
 
-  .sidebar-toggle {
+  .sidebar-logout {
     display: inline-flex;
     align-items: center;
+    font-size: 12px;
+    line-height: 1.1;
+    border-radius: 999px;
+    padding: 7px 10px;
   }
 
-  .sidebar-nav,
   .sidebar-footer {
     display: none;
   }
 
-  .sidebar.open .sidebar-nav,
-  .sidebar.open .sidebar-footer {
+  .sidebar-nav {
     display: flex;
-  }
-
-  .sidebar.open .sidebar-nav {
-    padding-top: 6px;
-  }
-
-  .sidebar.open .sidebar-footer {
-    border-top: 1px solid rgba(255, 255, 255, 0.18);
-    padding-top: 12px;
-    margin-top: 2px;
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
     gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
   }
 
-  .sidebar.open .sidebar-footer .button {
-    width: 100%;
+  .sidebar-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sidebar-nav a {
+    white-space: nowrap;
+    font-size: 13px;
+    padding: 8px 11px;
+    border-radius: 999px;
+    color: #d5e4ff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .sidebar-nav a.active {
+    color: #0d1b3f;
+    background: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 8px 18px rgba(5, 10, 28, 0.25);
   }
 
   .content {
@@ -637,5 +684,160 @@ textarea {
     border: 1px solid #e6ebf5;
     border-radius: 12px;
     background: #fafcff;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar h1 {
+    font-size: 16px;
+  }
+
+  .content {
+    padding: 10px;
+  }
+
+  .stacked {
+    gap: 10px;
+  }
+
+  .stacked h2 {
+    margin: 0;
+    font-size: 28px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: #111b3d;
+  }
+
+  .panel {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .filter-grid {
+    gap: 8px;
+  }
+
+  .filter-actions {
+    gap: 6px;
+  }
+
+  .button {
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  .table-wrap {
+    overflow-x: visible;
+  }
+
+  .table.table-mobile {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .table.table-mobile thead {
+    display: none;
+  }
+
+  .table.table-mobile tbody {
+    display: grid;
+    gap: 8px;
+  }
+
+  .table.table-mobile tr {
+    display: block;
+    border: 1px solid #e4e9f6;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+    padding: 7px 9px;
+    box-shadow: 0 8px 20px rgba(11, 25, 63, 0.05);
+  }
+
+  .table.table-mobile td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border-bottom: 1px dashed #e7ecf8;
+    white-space: normal;
+    text-align: right;
+    font-size: 13px;
+    padding: 8px 0;
+  }
+
+  .table.table-mobile td:last-child {
+    border-bottom: none;
+  }
+
+  .table.table-mobile td::before {
+    content: attr(data-label);
+    color: #334155;
+    font-weight: 700;
+    text-align: left;
+    flex: 1;
+  }
+
+  .table-action-link {
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .empty-cell {
+    padding: 8px 0;
+    font-size: 13px;
+  }
+
+  input,
+  textarea {
+    padding: 9px;
+    font-size: 14px;
+  }
+
+  .pdf-viewer-actions .button {
+    width: 100%;
+  }
+
+  .pdf-viewer-frame {
+    height: 68vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .content {
+    padding: 8px;
+  }
+
+  .stacked h2 {
+    font-size: 24px;
+  }
+
+  .panel {
+    padding: 10px;
+    border-radius: 10px;
+  }
+
+  .sidebar h1 {
+    font-size: 15px;
+  }
+
+  .sidebar-nav a {
+    font-size: 12px;
+    padding: 7px 10px;
+  }
+
+  .sidebar-logout {
+    padding: 6px 9px;
+    font-size: 11px;
+  }
+
+  .button {
+    padding: 9px 10px;
+    font-size: 13px;
+  }
+
+  .table.table-mobile td {
+    font-size: 12px;
+    padding: 7px 0;
   }
 }

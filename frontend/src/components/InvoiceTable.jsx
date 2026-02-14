@@ -1,27 +1,11 @@
-import { useState } from 'react';
-import api from '../services/api';
+import { Link } from 'react-router-dom';
 
 function InvoiceTable({ invoices }) {
-  const [openingPdfId, setOpeningPdfId] = useState(null);
-
-  const handleOpenPdf = async (invoice) => {
-    setOpeningPdfId(invoice.id);
-    try {
-      const response = await api.get(`/invoices/${invoice.id}/pdf`, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-      window.open(url, '_blank', 'noopener,noreferrer');
-      window.setTimeout(() => window.URL.revokeObjectURL(url), 60000);
-    } catch (error) {
-      window.alert(error?.response?.data?.message || 'Unable to open invoice PDF right now.');
-    } finally {
-      setOpeningPdfId(null);
-    }
-  };
-
   return (
     <div className="panel">
+      {invoices.length === 0 ? <p className="empty-cell">No invoices found.</p> : null}
       <div className="table-wrap">
-        <table className="table">
+        <table className="table table-mobile">
           <thead>
             <tr>
               <th>Invoice #</th>
@@ -34,36 +18,23 @@ function InvoiceTable({ invoices }) {
             </tr>
           </thead>
           <tbody>
-            {invoices.length === 0 ? (
-              <tr>
-                <td colSpan="7" className="empty-cell">No invoices found.</td>
+            {invoices.map((invoice) => (
+              <tr key={invoice.id}>
+                <td data-label="Invoice #">{invoice.invoice_number}</td>
+                <td data-label="Customer">{invoice.customer_name}</td>
+                <td data-label="Organization">{invoice.organization}</td>
+                <td data-label="Invoice Date">{invoice.invoice_date}</td>
+                <td data-label="Due Date">{invoice.due_date}</td>
+                <td data-label="Total">NLe {Number(invoice.total).toFixed(2)}</td>
+                <td data-label="PDF">
+                  {invoice.pdf_path ? (
+                    <Link className="table-action-link" to={`/invoices/${invoice.id}/view`}>View</Link>
+                  ) : (
+                    '-'
+                  )}
+                </td>
               </tr>
-            ) : (
-              invoices.map((invoice) => (
-                <tr key={invoice.id}>
-                  <td>{invoice.invoice_number}</td>
-                  <td>{invoice.customer_name}</td>
-                  <td>{invoice.organization}</td>
-                  <td>{invoice.invoice_date}</td>
-                  <td>{invoice.due_date}</td>
-                  <td>NLe {Number(invoice.total).toFixed(2)}</td>
-                  <td>
-                    {invoice.pdf_path ? (
-                      <button
-                        type="button"
-                        className="table-action-link"
-                        onClick={() => handleOpenPdf(invoice)}
-                        disabled={openingPdfId === invoice.id}
-                      >
-                        {openingPdfId === invoice.id ? 'Opening...' : 'Open'}
-                      </button>
-                    ) : (
-                      '-'
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
+            ))}
           </tbody>
         </table>
       </div>

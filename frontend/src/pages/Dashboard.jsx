@@ -45,7 +45,7 @@ function Dashboard() {
       <section className="panel">
         <h3>Recent Invoices</h3>
         <div className="table-wrap">
-          <table className="table">
+          <table className="table table-mobile">
             <thead>
               <tr>
                 <th>Invoice #</th>
@@ -57,10 +57,10 @@ function Dashboard() {
             <tbody>
               {data.recent_invoices.map((invoice) => (
                 <tr key={invoice.id}>
-                  <td>{invoice.invoice_number}</td>
-                  <td>{invoice.customer_name}</td>
-                  <td>{invoice.organization}</td>
-                  <td>NLe {Number(invoice.total).toFixed(2)}</td>
+                  <td data-label="Invoice #">{invoice.invoice_number}</td>
+                  <td data-label="Customer">{invoice.customer_name}</td>
+                  <td data-label="Organization">{invoice.organization}</td>
+                  <td data-label="Total">NLe {Number(invoice.total).toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>

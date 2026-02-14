@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import InvoiceList from './pages/InvoiceList';
 import CreateInvoice from './pages/CreateInvoice';
 import PdfSettings from './pages/PdfSettings';
+import InvoicePdfViewer from './pages/InvoicePdfViewer';
 import ProtectedLayout from './layouts/ProtectedLayout';
 import { useAuth } from './context/AuthContext';
 
@@ -22,6 +23,7 @@ function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/invoices" element={<InvoiceList />} />
         <Route path="/invoices/create" element={<CreateInvoice />} />
+        <Route path="/invoices/:invoiceId/view" element={<InvoicePdfViewer />} />
         <Route path="/pdf-settings" element={<PdfSettings />} />
       </Route>
 

@@ -87,21 +87,6 @@ function CreateInvoice() {
     }
   };
 
-  const handleOpenCreatedPdf = async () => {
-    if (!createdInvoice?.id) return;
-
-    setPdfLoading(true);
-    try {
-      const url = await fetchPdfBlobUrl(createdInvoice.id);
-      window.open(url, '_blank', 'noopener,noreferrer');
-      window.setTimeout(() => window.URL.revokeObjectURL(url), 60000);
-    } catch (err) {
-      setError(err?.response?.data?.message || 'Unable to open invoice PDF right now.');
-    } finally {
-      setPdfLoading(false);
-    }
-  };
-
   const handleDownloadCreatedPdf = async () => {
     if (!createdInvoice?.id) return;
 
@@ -117,8 +102,8 @@ function CreateInvoice() {
           <h3>Invoice Saved Successfully</h3>
           <p>Invoice <strong>{createdInvoice.invoice_number}</strong> has been created and PDF has been downloaded.</p>
           <div className="success-actions">
-            <button type="button" className="button" onClick={handleOpenCreatedPdf} disabled={pdfLoading}>
-              {pdfLoading ? 'Preparing PDF...' : 'View PDF'}
+            <button type="button" className="button" onClick={() => navigate(`/invoices/${createdInvoice.id}/view`)}>
+              View PDF
             </button>
             <button type="button" className="button button-outline" onClick={handleDownloadCreatedPdf} disabled={pdfLoading}>
               {pdfLoading ? 'Preparing PDF...' : 'Download Again'}
