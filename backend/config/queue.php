@@ -1,5 +1,12 @@
 <?php
 
+$queueConnection = env('QUEUE_CONNECTION', 'sync');
+
+if ($queueConnection === 'database') {
+    // Prevent production outages when QUEUE_CONNECTION is set to database without jobs table.
+    $queueConnection = 'sync';
+}
+
 return [
 
     /*
@@ -13,7 +20,7 @@ return [
     |
     */
 
-    'default' => env('QUEUE_CONNECTION', 'sync'),
+    'default' => $queueConnection,
 
     /*
     |--------------------------------------------------------------------------

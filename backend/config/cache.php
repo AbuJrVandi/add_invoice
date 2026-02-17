@@ -2,6 +2,13 @@
 
 use Illuminate\Support\Str;
 
+$cacheStore = env('CACHE_STORE', 'file');
+
+if ($cacheStore === 'database') {
+    // Prevent production outages when CACHE_STORE is set to database without cache tables.
+    $cacheStore = 'file';
+}
+
 return [
 
     /*
@@ -15,7 +22,7 @@ return [
     |
     */
 
-    'default' => env('CACHE_STORE', 'file'),
+    'default' => $cacheStore,
 
     /*
     |--------------------------------------------------------------------------

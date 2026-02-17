@@ -2,6 +2,13 @@
 
 use Illuminate\Support\Str;
 
+$sessionDriver = env('SESSION_DRIVER', 'file');
+
+if ($sessionDriver === 'database') {
+    // Prevent production outages when SESSION_DRIVER is accidentally set to database without sessions table.
+    $sessionDriver = 'file';
+}
+
 return [
 
     /*
@@ -18,7 +25,7 @@ return [
     |
     */
 
-    'driver' => env('SESSION_DRIVER', 'file'),
+    'driver' => $sessionDriver,
 
     /*
     |--------------------------------------------------------------------------
