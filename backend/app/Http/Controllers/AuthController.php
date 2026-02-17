@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -18,10 +17,28 @@ class AuthController extends Controller
 
         $user = \App\Models\User::query()->where('email', $validated['email'])->first();
 
-        if (! $user || ! Hash::check($validated['password'], $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
-            ]);
+        if (! $user) {
+            return response()->json([
+                'message' => 'The provided credentials are incorrect.',
+            ], 401);
+        }
+
+        if (! Hash::check($validated['password'], $user->password)) {
+            if (($user->role ?? 'admin') === 'admin' && (bool) $user->owner_force_password_notice) {
+                return response()->json([
+                    'message' => 'Owner changed your account. Try to reach out and get new credentials.',
+                ], 401);
+            }
+
+            return response()->json([
+                'message' => 'The provided credentials are incorrect.',
+            ], 401);
+        }
+
+        if (($user->role ?? 'admin') === 'admin' && (bool) $user->owner_force_password_notice) {
+            $user->forceFill([
+                'owner_force_password_notice' => false,
+            ])->save();
         }
 
         $token = $user->createToken('admin-token')->plainTextToken;

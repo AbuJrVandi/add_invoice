@@ -23,6 +23,10 @@ class User extends Authenticatable
         'email',
         'role',
         'password',
+        'managed_by_owner_id',
+        'owner_password_ciphertext',
+        'owner_password_changed_at',
+        'owner_force_password_notice',
     ];
 
     public function isOwner(): bool
@@ -50,6 +54,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'owner_password_changed_at' => 'datetime',
+            'owner_force_password_notice' => 'boolean',
         ];
     }
 }

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import OwnerDashboard from './pages/OwnerDashboard';
+import OwnerAdminCredentials from './pages/OwnerAdminCredentials';
 import InvoiceList from './pages/InvoiceList';
 import CreateInvoice from './pages/CreateInvoice';
 import Payments from './pages/Payments';
@@ -25,6 +26,7 @@ function App() {
       <Route element={<ProtectedLayout />}>
         <Route path="/" element={<HomeRedirect />} />
         <Route path="/owner/dashboard" element={<OwnerOnly><OwnerDashboard /></OwnerOnly>} />
+        <Route path="/owner/admin-credentials" element={<OwnerOnly><OwnerAdminCredentials /></OwnerOnly>} />
         <Route path="/invoices" element={<AdminOnly><InvoiceList /></AdminOnly>} />
         <Route path="/invoices/create" element={<AdminOnly><CreateInvoice /></AdminOnly>} />
         <Route path="/invoices/:invoiceId/view" element={<InvoicePdfViewer />} />

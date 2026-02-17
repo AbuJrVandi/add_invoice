@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\InvoicePdfSettingController;
 use App\Http\Controllers\OwnerAnalyticsController;
+use App\Http\Controllers\OwnerAdminCredentialController;
 use App\Http\Controllers\OwnerApprovalController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\OwnerDashboardController;
@@ -47,6 +48,9 @@ Route::prefix('owner')
         Route::get('/analytics', OwnerAnalyticsController::class);
         Route::get('/dashboard', [OwnerDashboardController::class, 'index']);
         Route::get('/approvals', [OwnerApprovalController::class, 'index']);
+        Route::get('/admin-credentials', [OwnerAdminCredentialController::class, 'index']);
+        Route::post('/admin-credentials', [OwnerAdminCredentialController::class, 'store']);
+        Route::put('/admin-credentials/{user}/password', [OwnerAdminCredentialController::class, 'updatePassword']);
     });
 
 Route::get('/payments/{payment}/receipt', [PaymentController::class, 'receipt'])

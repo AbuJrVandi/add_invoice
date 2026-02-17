@@ -4,7 +4,7 @@ import api from '../services/api';
 import useResponsive from '../hooks/useResponsive';
 
 function Dashboard() {
-  const { isMobile, isTablet } = useResponsive();
+  const { isMobile } = useResponsive();
   const [data, setData] = useState({
     total_invoices: 0,
     cash_collected: 0,
@@ -38,7 +38,7 @@ function Dashboard() {
   return (
     <div className={`start-grid dashboard-page ${isMobile ? 'dashboard-mobile' : ''}`}>
       {/* Stats Overview */}
-      <div className={`stats-grid ${isTablet ? 'stats-grid-tablet' : ''}`}>
+      <div className="stats-grid">
         <article className="stat-card">
           <p>Cash Collected (Liquidity)</p>
           <h3 className="text-primary">NLe {Number(data.cash_collected).toFixed(2)}</h3>
@@ -59,30 +59,6 @@ function Dashboard() {
           <span className="sub-stat">
             {data.outstanding_invoices} unpaid invoices | Today earned: NLe {Number(data.today_earned_revenue).toFixed(2)}
           </span>
-        </article>
-
-        <article className="stat-card highlight-card quick-actions-card">
-          <div className="quick-actions-head">
-            <p>Quick Actions</p>
-            <span>Shortcuts</span>
-          </div>
-
-          <div className="quick-actions-grid">
-            <Link className="quick-action-btn primary" to="/invoices/create">
-              <strong>Create Invoice</strong>
-              <small>Issue new invoice</small>
-            </Link>
-
-            <Link className="quick-action-btn" to="/payments">
-              <strong>Record Payment</strong>
-              <small>Capture receipt</small>
-            </Link>
-
-            <Link className="quick-action-btn" to="/invoices">
-              <strong>View Invoices</strong>
-              <small>Manage open balances</small>
-            </Link>
-          </div>
         </article>
       </div>
 

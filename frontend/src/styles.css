@@ -2642,6 +2642,108 @@ textarea { min-height: 100px; resize: vertical; }
   text-decoration: underline;
 }
 
+/* Owner admin credentials */
+.owner-credentials-page h2 {
+  margin: 0;
+  font-family: 'Outfit', sans-serif;
+  font-size: 30px;
+  letter-spacing: -0.02em;
+}
+
+.owner-credentials-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.owner-credentials-header p {
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.owner-credentials-count {
+  border: 1px solid var(--border-light);
+  background: var(--surface-secondary);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  min-width: 180px;
+  display: grid;
+  gap: 6px;
+}
+
+.owner-credentials-count span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.owner-credentials-count strong {
+  font-family: 'Outfit', sans-serif;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.owner-credentials-form {
+  display: grid;
+  gap: 14px;
+}
+
+.owner-credentials-form h3 {
+  margin: 0;
+}
+
+.owner-credentials-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.owner-credentials-form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.owner-password-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.owner-credentials-mobile-list {
+  display: grid;
+  gap: 10px;
+}
+
+.owner-credentials-mobile-card {
+  border: 1px solid var(--border-light);
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.owner-credentials-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.owner-credentials-row span {
+  color: var(--text-muted);
+}
+
+.owner-credentials-row strong {
+  color: var(--text-primary);
+  text-align: right;
+}
+
 @media (max-width: 1200px) {
   .invoice-list-summary {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2659,6 +2761,19 @@ textarea { min-height: 100px; resize: vertical; }
 
   .invoice-list-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .owner-credentials-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .owner-credentials-header {
+    flex-direction: column;
+  }
+
+  .owner-credentials-count {
+    width: 100%;
+    min-width: 0;
   }
 }
 
@@ -2984,6 +3099,10 @@ textarea { min-height: 100px; resize: vertical; }
 @media (min-width: 1024px) {
   .stats-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .dashboard-page .stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

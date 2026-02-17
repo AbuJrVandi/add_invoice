@@ -6,6 +6,7 @@ import useResponsive from '../hooks/useResponsive';
 const PAGE_TITLES = {
   '/': 'Dashboard',
   '/owner/dashboard': 'Owner Analytics',
+  '/owner/admin-credentials': 'Admin Credentials',
   '/invoices': 'Invoices',
   '/invoices/create': 'Create Invoice',
   '/payments': 'Payments',
@@ -28,9 +29,11 @@ function navConfigForRole(role) {
     return {
       sideNav: [
         { to: '/owner/dashboard', label: 'Analytics', icon: '📈', exact: true },
+        { to: '/owner/admin-credentials', label: 'Admin Access', icon: '🔐' },
       ],
       mobileNav: [
         { to: '/owner/dashboard', label: 'Home', icon: '📈', exact: true },
+        { to: '/owner/admin-credentials', label: 'Admins', icon: '🔐' },
       ],
     };
   }
