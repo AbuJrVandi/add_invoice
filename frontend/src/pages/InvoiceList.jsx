@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
 import FilterBar from '../components/FilterBar';
 import InvoiceTable from '../components/InvoiceTable';
@@ -15,25 +16,35 @@ function InvoiceList() {
   const [draftFilters, setDraftFilters] = useState(defaultFilters);
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [lastUpdated, setLastUpdated] = useState(null);
 
-  const fetchInvoices = async (activeFilters) => {
+  const fetchInvoices = useCallback(async (activeFilters) => {
     setLoading(true);
+    setError('');
+
     try {
       const params = Object.fromEntries(
         Object.entries(activeFilters)
           .map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
           .filter(([, value]) => value !== '')
       );
-      const response = await api.get('/invoices', { params });
-      setInvoices(response.data.data || []);
+
+      const response = await api.get('/invoices', { params: { ...params, per_page: 20 } });
+      const rows = Array.isArray(response.data?.data) ? response.data.data : [];
+      setInvoices(rows);
+      setLastUpdated(new Date());
+    } catch (requestError) {
+      setError(requestError?.response?.data?.message || 'Failed to load invoices. Please retry.');
+      setInvoices([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchInvoices(filters);
-  }, []);
+  }, [fetchInvoices, filters]);
 
   const handleChange = (field, value) => {
     setDraftFilters((prev) => ({ ...prev, [field]: value }));
@@ -41,20 +52,98 @@ function InvoiceList() {
 
   const handleApply = () => {
     setFilters(draftFilters);
-    fetchInvoices(draftFilters);
   };
 
   const handleReset = () => {
     setDraftFilters(defaultFilters);
     setFilters(defaultFilters);
-    fetchInvoices(defaultFilters);
   };
 
+  const summary = useMemo(() => {
+    const counts = {
+      all: invoices.length,
+      pending: 0,
+      due: 0,
+      completed: 0,
+      outstandingBalance: 0,
+    };
+
+    invoices.forEach((invoice) => {
+      const status = String(invoice?.status || '').toLowerCase();
+      if (status === 'pending') {
+        counts.pending += 1;
+      }
+      if (status === 'due') {
+        counts.due += 1;
+      }
+      if (status === 'completed' || status === 'paid') {
+        counts.completed += 1;
+      }
+
+      counts.outstandingBalance += Number(invoice?.balance_remaining || 0);
+    });
+
+    return counts;
+  }, [invoices]);
+
   return (
-    <div className="stacked">
-      <h2>Invoices</h2>
-      <FilterBar filters={draftFilters} onChange={handleChange} onReset={handleReset} onApply={handleApply} />
-      {loading ? <p>Loading invoices...</p> : <InvoiceTable invoices={invoices} />}
+    <div className="invoice-list-page stacked">
+      <div className="invoice-list-header panel">
+        <div>
+          <h1>Invoices</h1>
+          <p>Track issued invoices, balances, and payment readiness in one place.</p>
+          <small>
+            {lastUpdated
+              ? `Last updated ${lastUpdated.toLocaleTimeString()}`
+              : 'Loading latest invoices...'}
+          </small>
+        </div>
+
+        <div className="invoice-list-header-actions">
+          <button type="button" className="button button-outline" onClick={() => fetchInvoices(filters)}>
+            Refresh
+          </button>
+          <Link to="/invoices/create" className="button">
+            + Create New Invoice
+          </Link>
+        </div>
+      </div>
+
+      {error ? <div className="error">{error}</div> : null}
+
+      <section className="invoice-list-summary">
+        <article className="invoice-list-summary-card">
+          <span>Total Loaded</span>
+          <strong>{summary.all}</strong>
+        </article>
+        <article className="invoice-list-summary-card">
+          <span>Pending</span>
+          <strong>{summary.pending}</strong>
+        </article>
+        <article className="invoice-list-summary-card">
+          <span>Due</span>
+          <strong>{summary.due}</strong>
+        </article>
+        <article className="invoice-list-summary-card">
+          <span>Completed</span>
+          <strong>{summary.completed}</strong>
+        </article>
+        <article className="invoice-list-summary-card highlight">
+          <span>Outstanding Balance</span>
+          <strong>NLe {summary.outstandingBalance.toFixed(2)}</strong>
+        </article>
+      </section>
+
+      <FilterBar
+        filters={draftFilters}
+        onChange={handleChange}
+        onApply={handleApply}
+        onReset={handleReset}
+      />
+
+      <div className="panel invoice-table-panel">
+        <InvoiceTable invoices={invoices} loading={loading} />
+      </div>
     </div>
   );
 }

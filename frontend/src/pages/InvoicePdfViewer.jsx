@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 function InvoicePdfViewer() {
   const { invoiceId } = useParams();
+  const { user } = useAuth();
   const [pdfUrl, setPdfUrl] = useState('');
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState('');
+  const backPath = user?.role === 'owner' ? '/owner/dashboard' : '/invoices';
 
   useEffect(() => {
     let objectUrl = '';
@@ -70,7 +73,9 @@ function InvoicePdfViewer() {
         <h2>Invoice PDF</h2>
         <p className="error panel">{error}</p>
         <div>
-          <Link className="button button-outline" to="/invoices">Back to Invoices</Link>
+          <Link className="button button-outline" to={backPath}>
+            {user?.role === 'owner' ? 'Back to Owner Dashboard' : 'Back to Invoices'}
+          </Link>
         </div>
       </div>
     );
@@ -84,7 +89,7 @@ function InvoicePdfViewer() {
           <button type="button" className="button button-outline" onClick={handleDownload} disabled={downloading}>
             {downloading ? 'Downloading...' : 'Download PDF'}
           </button>
-          <Link className="button button-outline" to="/invoices">Back</Link>
+          <Link className="button button-outline" to={backPath}>Back</Link>
         </div>
       </div>
 

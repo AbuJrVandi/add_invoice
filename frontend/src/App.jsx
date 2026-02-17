@@ -1,8 +1,11 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import OwnerDashboard from './pages/OwnerDashboard';
 import InvoiceList from './pages/InvoiceList';
 import CreateInvoice from './pages/CreateInvoice';
+import Payments from './pages/Payments';
+import ReceiptViewer from './pages/ReceiptViewer';
 import PdfSettings from './pages/PdfSettings';
 import InvoicePdfViewer from './pages/InvoicePdfViewer';
 import ProtectedLayout from './layouts/ProtectedLayout';
@@ -20,16 +23,43 @@ function App() {
       <Route path="/login" element={token ? <Navigate to="/" replace /> : <Login />} />
 
       <Route element={<ProtectedLayout />}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/invoices" element={<InvoiceList />} />
-        <Route path="/invoices/create" element={<CreateInvoice />} />
+        <Route path="/" element={<HomeRedirect />} />
+        <Route path="/owner/dashboard" element={<OwnerOnly><OwnerDashboard /></OwnerOnly>} />
+        <Route path="/invoices" element={<AdminOnly><InvoiceList /></AdminOnly>} />
+        <Route path="/invoices/create" element={<AdminOnly><CreateInvoice /></AdminOnly>} />
         <Route path="/invoices/:invoiceId/view" element={<InvoicePdfViewer />} />
-        <Route path="/pdf-settings" element={<PdfSettings />} />
+        <Route path="/payments" element={<AdminOnly><Payments /></AdminOnly>} />
+        <Route path="/payments/:paymentId/receipt" element={<AdminOnly><ReceiptViewer /></AdminOnly>} />
+        <Route path="/pdf-settings" element={<AdminOnly><PdfSettings /></AdminOnly>} />
       </Route>
 
       <Route path="*" element={<Navigate to={token ? '/' : '/login'} replace />} />
     </Routes>
   );
+}
+
+function HomeRedirect() {
+  const { user } = useAuth();
+  if (user?.role === 'owner') {
+    return <Navigate to="/owner/dashboard" replace />;
+  }
+  return <Dashboard />;
+}
+
+function AdminOnly({ children }) {
+  const { user } = useAuth();
+  if (user?.role === 'owner') {
+    return <Navigate to="/owner/dashboard" replace />;
+  }
+  return children;
+}
+
+function OwnerOnly({ children }) {
+  const { user } = useAuth();
+  if (user?.role !== 'owner') {
+    return <Navigate to="/" replace />;
+  }
+  return children;
 }
 
 export default App;

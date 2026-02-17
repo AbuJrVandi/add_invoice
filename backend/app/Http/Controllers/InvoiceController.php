@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Http\Requests\InvoiceFilterRequest;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\InvoicePdfSetting;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -56,26 +58,11 @@ class InvoiceController extends Controller
         $validated = $request->validated();
 
         $invoice = DB::transaction(function () use ($validated) {
-            $computedItems = [];
-            $subtotal = 0.0;
-
-            foreach ($validated['items'] as $item) {
-                $quantity = (int) $item['quantity'];
-                $unitPrice = round((float) $item['unit_price'], 2);
-                $amount = round($quantity * $unitPrice, 2);
-                $subtotal += $amount;
-
-                $computedItems[] = [
-                    'description' => $item['description'],
-                    'quantity' => $quantity,
-                    'unit_price' => $unitPrice,
-                    'amount' => $amount,
-                ];
-            }
-
-            $subtotal = round($subtotal, 2);
-            $tax = round((float) ($validated['tax'] ?? 0), 2);
-            $total = round($subtotal + $tax, 2);
+            $computed = $this->computeInvoiceTotals($validated);
+            $computedItems = $computed['items'];
+            $subtotal = $computed['subtotal'];
+            $tax = $computed['tax'];
+            $total = $computed['total'];
 
             $requestedNumber = $validated['invoice_number'] ?? null;
             $invoiceNumber = $requestedNumber && ! Invoice::query()->where('invoice_number', $requestedNumber)->exists()
@@ -95,30 +82,21 @@ class InvoiceController extends Controller
                 'tax' => $tax,
                 'total' => $total,
                 'pdf_path' => null,
+                'status' => Invoice::STATUS_PENDING,
+                'amount_paid' => 0,
+                'balance_remaining' => $total,
             ]);
 
             $invoice->items()->createMany($computedItems);
 
             $filename = 'invoice-'.$invoice->invoice_number.'-'.time().'.pdf';
             $relativePath = 'invoices/'.$filename;
-            $settings = InvoicePdfSetting::query()->first();
+
+            $companyData = $this->buildCompanyData();
 
             $pdf = Pdf::loadView('pdf.invoice', [
                 'invoice' => $invoice->fresh('items'),
-                'company' => [
-                    'name' => $settings?->company_name ?? config('app.name', 'East Repair Inc.'),
-                    'address_lines' => [
-                        '1912 Harvest Lane',
-                        'New York, NY 12210',
-                    ],
-                    'logo' => $settings?->logo_path ? storage_path('app/public/'.$settings->logo_path) : public_path('assets/company-logo.png'),
-                    'signature' => $settings?->signature_path ? storage_path('app/public/'.$settings->signature_path) : public_path('assets/default-signature.png'),
-                    'issuer_name' => $settings?->issuer_name ?? 'Administrator',
-                    'terms' => [
-                        'Payment is due within 15 days',
-                        'Please make checks payable to: '.($settings?->company_name ?? 'East Repair Inc.').'.',
-                    ],
-                ],
+                'company' => $companyData,
             ])->setPaper('a4', 'portrait');
 
             Storage::disk('public')->put($relativePath, $pdf->output());
@@ -135,6 +113,56 @@ class InvoiceController extends Controller
                 'pdf_url' => url('/api/invoices/'.$invoice->id.'/pdf'),
             ],
         ], 201);
+    }
+
+    /**
+     * Build a PDF preview from draft payload (no persistence).
+     * The same template and totals logic are used as the final stored invoice.
+     */
+    public function previewPdf(StoreInvoiceRequest $request): Response
+    {
+        $validated = $request->validated();
+        $computed = $this->computeInvoiceTotals($validated);
+
+        $invoiceNumber = trim((string) ($validated['invoice_number'] ?? ''));
+        if ($invoiceNumber === '') {
+            $invoiceNumber = $this->buildUniqueInvoiceNumber();
+        }
+
+        $previewInvoice = new Invoice([
+            'invoice_number' => $invoiceNumber,
+            'customer_name' => $validated['customer_name'],
+            'organization' => $validated['organization'],
+            'bill_to' => $validated['bill_to'],
+            'ship_to' => $validated['ship_to'],
+            'invoice_date' => $validated['invoice_date'],
+            'due_date' => $validated['due_date'],
+            'po_number' => $validated['po_number'] ?? null,
+            'subtotal' => $computed['subtotal'],
+            'tax' => $computed['tax'],
+            'total' => $computed['total'],
+            'status' => Invoice::STATUS_PENDING,
+            'amount_paid' => 0,
+            'balance_remaining' => $computed['total'],
+        ]);
+
+        $previewInvoice->setRelation(
+            'items',
+            collect($computed['items'])->map(fn (array $item): InvoiceItem => new InvoiceItem($item))
+        );
+
+        $pdf = Pdf::loadView('pdf.invoice', [
+            'invoice' => $previewInvoice,
+            'company' => $this->buildCompanyData(),
+        ])->setPaper('a4', 'portrait');
+
+        $filename = 'invoice-preview-'.$invoiceNumber.'.pdf';
+
+        return response($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$filename.'"',
+            'Cache-Control' => 'private, max-age=0, must-revalidate',
+        ]);
     }
 
     public function pdf(Invoice $invoice): BinaryFileResponse|JsonResponse
@@ -167,6 +195,12 @@ class InvoiceController extends Controller
 
     public function destroy(Invoice $invoice): JsonResponse
     {
+        if ($invoice->payments()->exists() || $invoice->hasSale() || $invoice->isFullyPaid()) {
+            return response()->json([
+                'message' => 'This invoice has financial history and cannot be deleted.',
+            ], 422);
+        }
+
         DB::transaction(function () use ($invoice): void {
             if ($invoice->pdf_path) {
                 $relativePath = str_replace('storage/', '', $invoice->pdf_path);
@@ -178,6 +212,100 @@ class InvoiceController extends Controller
         });
 
         return response()->json(['message' => 'Invoice deleted successfully.']);
+    }
+
+    /**
+     * Build the company data array for the PDF template.
+     * Logo is always included automatically — uses uploaded setting or falls back to the default CIRQON logo.
+     */
+    private function buildCompanyData(): array
+    {
+        $settings = InvoicePdfSetting::query()->first();
+
+        // Determine logo path — always include the logo
+        $logoPath = public_path('assets/company-logo.png');
+
+        if ($settings?->logo_path) {
+            $uploadedLogoPath = storage_path('app/public/'.$settings->logo_path);
+            if (file_exists($uploadedLogoPath)) {
+                $logoPath = $uploadedLogoPath;
+            }
+        }
+
+        // Fallback: if the png doesn't exist, try jpeg
+        if (! file_exists($logoPath)) {
+            $jpegFallback = public_path('assets/company-logo.jpeg');
+            if (file_exists($jpegFallback)) {
+                $logoPath = $jpegFallback;
+            }
+        }
+
+        // Determine signature path
+        $signaturePath = public_path('assets/default-signature.png');
+        if ($settings?->signature_path) {
+            $uploadedSigPath = storage_path('app/public/'.$settings->signature_path);
+            if (file_exists($uploadedSigPath)) {
+                $signaturePath = $uploadedSigPath;
+            }
+        }
+
+        return [
+            'name' => $settings?->company_name ?? 'CIRQON Electronics',
+            'address_lines' => [
+                'No. 4 Light-Foot Boston Street',
+                'Via Radwon Street, Freetown',
+            ],
+            'phone' => '+232 74 141141 | +232 79 576950',
+            'logo' => $logoPath,
+            'signature' => $signaturePath,
+            'issuer_name' => $settings?->issuer_name ?? 'James Cole',
+            'terms' => [
+                'Payment is due within 15 days',
+                'Please make checks payable to: '.($settings?->company_name ?? 'CIRQON Electronics').'.',
+            ],
+            // Payment details matching the reference PDF
+            'bank' => 'UBA',
+            'account_name' => 'Wickburn Services SL LTD',
+            'account_no' => '5401-1003-000922-9',
+            'iban' => '010401100300092257',
+            'swift_code' => 'UNAFSLFR',
+            'contact_person' => 'James Cole',
+            'contact_email' => 'Jamesericksoncole57@gmail.com',
+        ];
+    }
+
+    /**
+     * Compute canonical item amounts and totals for preview + persistence consistency.
+     */
+    private function computeInvoiceTotals(array $validated): array
+    {
+        $computedItems = [];
+        $subtotal = 0.0;
+
+        foreach ($validated['items'] as $item) {
+            $quantity = (int) $item['quantity'];
+            $unitPrice = round((float) $item['unit_price'], 2);
+            $amount = round($quantity * $unitPrice, 2);
+            $subtotal += $amount;
+
+            $computedItems[] = [
+                'description' => $item['description'],
+                'quantity' => $quantity,
+                'unit_price' => $unitPrice,
+                'amount' => $amount,
+            ];
+        }
+
+        $subtotal = round($subtotal, 2);
+        $tax = round((float) ($validated['tax'] ?? 0), 2);
+        $total = round($subtotal + $tax, 2);
+
+        return [
+            'items' => $computedItems,
+            'subtotal' => $subtotal,
+            'tax' => $tax,
+            'total' => $total,
+        ];
     }
 
     private function buildUniqueInvoiceNumber(): string

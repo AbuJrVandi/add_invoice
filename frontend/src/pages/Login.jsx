@@ -36,7 +36,7 @@ function Login() {
       }
       navigate('/');
     } catch (err) {
-      setError(err?.response?.data?.message || 'Login failed.');
+      setError(err?.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -45,25 +45,40 @@ function Login() {
   return (
     <div className="centered-page auth-layout">
       <div className="auth-shell">
+        {/* Left Brand Panel */}
         <section className="auth-panel auth-panel-brand">
-          <p className="auth-eyebrow">Invoice Platform</p>
-          <h1>Welcome back</h1>
-          <p className="auth-description">
-            Sign in to manage invoices, monitor payment status, and export professional PDF records.
-          </p>
-          <ul className="auth-points">
-            <li>Track invoices with live status updates</li>
-            <li>Create polished documents in minutes</li>
-            <li>Keep financial records centralized</li>
-          </ul>
+          <div className="auth-brand-content">
+            <img
+              src="/set.png"
+              alt="CIRQON Electronics"
+              className="auth-logo"
+            />
+            <p className="auth-eyebrow">Electronics Sales & Service</p>
+            <h1>CIRQON Electronics</h1>
+            <p className="auth-description">
+              Professional invoice management system for electronics sales, service tracking, and financial operations.
+            </p>
+            <ul className="auth-points">
+              <li>Create & manage electronic invoices</li>
+              <li>Track payments with live status updates</li>
+              <li>Generate professional PDF documents</li>
+              <li>Keep financial records centralized</li>
+            </ul>
+          </div>
         </section>
 
-        <form className="panel auth-card" onSubmit={handleSubmit}>
-          <h2>Sign in</h2>
-          <p className="auth-subtitle">Use your administrator account to continue.</p>
+        {/* Right Login Card */}
+        <form className="auth-panel auth-card" onSubmit={handleSubmit} id="login-form">
+          <img
+            src="/set.png"
+            alt="CIRQON"
+            className="auth-card-logo"
+          />
+          <h2>Welcome back</h2>
+          <p className="auth-subtitle">Sign in to your administrator account to continue.</p>
 
           <div className="auth-field">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">Email Address</label>
             <input
               id="email"
               type="email"
@@ -105,14 +120,28 @@ function Login() {
                 checked={saveAccount}
                 onChange={(e) => setSaveAccount(e.target.checked)}
               />
-              <span>Save account</span>
+              <span>Remember me</span>
             </label>
+            <a href="#" className="auth-forgot" onClick={(e) => e.preventDefault()}>Forgot password?</a>
           </div>
 
           {error ? <p className="error">{error}</p> : null}
 
-          <button className="button auth-submit" type="submit" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
+          <button className="button auth-submit" type="submit" id="login-submit" disabled={loading}>
+            {loading ? (
+              <>
+                <span className="spinner" style={{
+                  display: 'inline-block',
+                  width: '16px',
+                  height: '16px',
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  borderTopColor: '#fff',
+                  borderRadius: '50%',
+                  animation: 'spin 0.6s linear infinite',
+                }} />
+                Signing in...
+              </>
+            ) : 'Sign In'}
           </button>
         </form>
       </div>

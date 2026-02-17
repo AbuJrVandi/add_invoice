@@ -8,7 +8,7 @@ function PdfSettings() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [form, setForm] = useState({
-    company_name: 'East Repair Inc.',
+    company_name: 'CIRQON Electronics',
     issuer_name: 'Administrator',
     logo: null,
     signature: null,
@@ -29,7 +29,7 @@ function PdfSettings() {
 
         setForm((prev) => ({
           ...prev,
-          company_name: data.company_name || 'East Repair Inc.',
+          company_name: data.company_name || 'CIRQON Electronics',
           issuer_name: data.issuer_name || 'Administrator',
         }));
 

@@ -8,9 +8,11 @@ function CreateInvoice() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [numberLoading, setNumberLoading] = useState(true);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [formDraft, setFormDraft] = useState(null);
   const [draftInvoice, setDraftInvoice] = useState(null);
+  const [previewPdfUrl, setPreviewPdfUrl] = useState('');
   const [createdInvoice, setCreatedInvoice] = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [error, setError] = useState('');
@@ -35,9 +37,43 @@ function CreateInvoice() {
     loadNextNumber();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (previewPdfUrl) {
+        window.URL.revokeObjectURL(previewPdfUrl);
+      }
+    };
+  }, [previewPdfUrl]);
+
+  const buildPreviewPdf = async (payload) => {
+    const response = await api.post('/invoices/preview-pdf', payload, { responseType: 'blob' });
+    return window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+  };
+
   const handlePreview = async (payload) => {
     setFormDraft(payload);
-    setDraftInvoice(payload);
+    setError('');
+    setPreviewLoading(true);
+
+    try {
+      const nextUrl = await buildPreviewPdf(payload);
+
+      setDraftInvoice(payload);
+      setPreviewPdfUrl((previousUrl) => {
+        if (previousUrl) {
+          window.URL.revokeObjectURL(previousUrl);
+        }
+        return nextUrl;
+      });
+    } catch (err) {
+      if (err?.response?.status === 401) {
+        setError('Your session expired. Please log in again.');
+      } else {
+        setError(err?.response?.data?.message || 'Failed to generate invoice preview.');
+      }
+    } finally {
+      setPreviewLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -69,13 +105,13 @@ function CreateInvoice() {
     return window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
   };
 
-  const handleDownloadPdf = async (invoiceId, invoiceNumber) => {
+  const handleDownloadPdf = async (invoiceId, invoiceNumberToDownload) => {
     setPdfLoading(true);
     try {
       const url = await fetchPdfBlobUrl(invoiceId);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `invoice-${invoiceNumber || invoiceId}.pdf`;
+      link.download = `invoice-${invoiceNumberToDownload || invoiceId}.pdf`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -91,6 +127,10 @@ function CreateInvoice() {
     if (!createdInvoice?.id) return;
 
     await handleDownloadPdf(createdInvoice.id, createdInvoice.invoice_number);
+  };
+
+  const handleBackToEdit = () => {
+    setDraftInvoice(null);
   };
 
   if (createdInvoice) {
@@ -129,12 +169,13 @@ function CreateInvoice() {
       <div className="stacked">
         <h2>Review Before Create</h2>
         {error ? <p className="error panel">{error}</p> : null}
-        <InvoicePreview invoice={draftInvoice} />
+        <p className="muted">This preview is generated from the same PDF template used for final printing.</p>
+        <InvoicePreview pdfUrl={previewPdfUrl} loading={previewLoading} />
         <div className="filter-actions">
-          <button type="button" className="button button-outline" onClick={() => setDraftInvoice(null)}>
+          <button type="button" className="button button-outline" onClick={handleBackToEdit}>
             Back to Edit
           </button>
-          <button type="button" className="button" onClick={handleSubmit} disabled={loading}>
+          <button type="button" className="button" onClick={handleSubmit} disabled={loading || previewLoading}>
             {loading ? 'Creating...' : 'Create Invoice'}
           </button>
         </div>
@@ -146,7 +187,16 @@ function CreateInvoice() {
     <div className="stacked">
       <h2>Create Invoice</h2>
       {error ? <p className="error panel">{error}</p> : null}
-      {numberLoading ? <p>Preparing invoice number...</p> : <InvoiceForm onPreview={handlePreview} loading={loading} invoiceNumber={invoiceNumber} initialData={formDraft} />}
+      {numberLoading ? (
+        <p>Preparing invoice number...</p>
+      ) : (
+        <InvoiceForm
+          onPreview={handlePreview}
+          loading={loading || previewLoading}
+          invoiceNumber={invoiceNumber}
+          initialData={formDraft}
+        />
+      )}
     </div>
   );
 }

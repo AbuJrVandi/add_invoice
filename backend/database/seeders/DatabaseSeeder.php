@@ -20,6 +20,15 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@invoicesystem.com',
         ], [
             'name' => 'Administrator',
+            'role' => 'admin',
+            'password' => Hash::make('password'),
+        ]);
+
+        User::query()->updateOrCreate([
+            'email' => 'owner@invoicesystem.com',
+        ], [
+            'name' => 'Owner',
+            'role' => 'owner',
             'password' => Hash::make('password'),
         ]);
     }

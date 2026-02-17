@@ -5,339 +5,436 @@
     <title>Invoice {{ $invoice->invoice_number }}</title>
     <style>
         @page {
-            margin: 14mm 12mm;
+            margin: 15mm 15mm 20mm 15mm;
+            size: A4 portrait;
         }
+
         body {
-            font-family: DejaVu Sans, sans-serif;
+            font-family: DejaVu Sans, Helvetica, Arial, sans-serif;
             margin: 0;
-            color: #0f172a;
-            font-size: 11.5px;
-            line-height: 1.42;
+            padding: 0;
+            color: #333333;
+            font-size: 10px;
+            line-height: 1.4;
         }
+
         .page {
             padding: 0;
         }
-        .top {
+
+        /* ===== HEADER: Logo left, INVOICE title right ===== */
+        .header-table {
             width: 100%;
-            margin-bottom: 18px;
+            margin-bottom: 0;
         }
-        .top td {
+
+        .header-table td {
             vertical-align: top;
         }
-        .title {
-            font-family: DejaVu Serif, serif;
-            font-size: 56px;
-            line-height: 1;
-            letter-spacing: 0.6px;
-            margin: 0;
-            color: #1e2b59;
-            font-weight: 700;
+
+        .logo-cell {
+            width: 200px;
         }
-        .logo-circle {
-            width: 88px;
-            height: 88px;
-            border-radius: 50%;
-            background: #b8bbc1;
-            text-align: center;
-            line-height: 88px;
-            font-weight: 700;
-            font-size: 14px;
-            color: #fff;
-            margin-left: auto;
-        }
+
         .logo-image {
-            width: 88px;
-            height: 88px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin-left: auto;
-            display: block;
+            max-width: 160px;
+            max-height: 90px;
         }
-        .company {
-            margin-top: 8px;
-            line-height: 1.45;
-        }
-        .company .name {
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 4px;
-            color: #0b1326;
-        }
-        .meta {
-            width: 100%;
-            margin-top: 12px;
-            margin-bottom: 14px;
-        }
-        .meta td {
-            width: 33%;
-            vertical-align: top;
-            padding-right: 12px;
-        }
-        .section-label {
-            font-family: DejaVu Serif, serif;
-            color: #1e2b59;
-            font-weight: 700;
-            font-size: 16px;
-            letter-spacing: 0.6px;
-            margin: 0 0 6px;
-            line-height: 1;
-            text-transform: uppercase;
-        }
-        .meta-block {
-            margin: 0;
+
+        .company-address {
+            margin-top: 4px;
+            font-size: 8px;
+            color: #555555;
             line-height: 1.4;
-            white-space: pre-wrap;
         }
-        .kv {
-            width: 100%;
+
+        .company-phone {
+            font-size: 8px;
+            color: #555555;
+            margin-top: 2px;
         }
-        .kv td {
-            padding-bottom: 5px;
+
+        .invoice-title-cell {
+            text-align: right;
             vertical-align: top;
         }
-        .kv .k {
-            font-family: DejaVu Serif, serif;
-            color: #1e2b59;
+
+        .invoice-title {
+            font-family: DejaVu Sans, Helvetica, Arial, sans-serif;
+            font-size: 42px;
             font-weight: 700;
-            font-size: 12px;
+            color: #333333;
+            margin: 0;
+            letter-spacing: 2px;
+            line-height: 1;
+        }
+
+        .invoice-number {
+            font-size: 14px;
+            color: #E8760A;
+            margin-top: 6px;
+            font-weight: 400;
+        }
+
+        /* ===== ORANGE DIVIDER ===== */
+        .orange-divider {
+            border: none;
+            border-top: 3px solid #E8760A;
+            margin: 14px 0 16px 0;
+        }
+
+        .thin-divider {
+            border: none;
+            border-top: 1px solid #CCCCCC;
+            margin: 6px 0 10px 0;
+        }
+
+        /* ===== BILL TO + DETAILS SECTION ===== */
+        .meta-table {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .meta-table td {
+            vertical-align: top;
+        }
+
+        .bill-to-cell {
+            width: 55%;
+        }
+
+        .details-cell {
+            width: 45%;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #E8760A;
+            margin: 0 0 4px 0;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
-            width: 108px;
+            letter-spacing: 0.5px;
         }
-        .divider {
-            border-top: 2px solid #d4534f;
-            margin: 12px 0 2px;
+
+        .bill-to-content {
+            font-size: 10px;
+            color: #333333;
+            line-height: 1.6;
+            margin-top: 8px;
         }
+
+        .details-table {
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .details-table td {
+            padding: 3px 0;
+            font-size: 10px;
+            vertical-align: top;
+        }
+
+        .details-label {
+            font-weight: 700;
+            color: #555555;
+            width: 100px;
+        }
+
+        .details-value {
+            color: #333333;
+        }
+
+        /* ===== ITEMS TABLE ===== */
         table.items {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 6px;
-            margin-bottom: 8px;
+            margin-bottom: 16px;
         }
+
         table.items thead th {
-            font-family: DejaVu Serif, serif;
-            color: #1e2b59;
-            text-transform: uppercase;
+            background-color: #E8760A;
+            color: #FFFFFF;
             font-weight: 700;
-            letter-spacing: 0.4px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 10px 12px;
             text-align: left;
-            padding: 7px 6px 7px;
-            border-bottom: 2px solid #d4534f;
         }
+
+        table.items thead th.t-right {
+            text-align: right;
+        }
+
         table.items tbody td {
-            padding: 8px 6px;
-            border-bottom: 1px solid #e5e7eb;
+            padding: 10px 12px;
+            border-bottom: 1px solid #E5E5E5;
+            font-size: 10px;
+            color: #333333;
+            vertical-align: top;
         }
+
+        table.items tbody td.t-right {
+            text-align: right;
+        }
+
         table.items tbody tr {
             page-break-inside: avoid;
         }
-        .t-right {
-            text-align: right;
-        }
-        .totals {
-            width: 350px;
-            margin-left: auto;
-            margin-top: 8px;
-            page-break-inside: avoid;
-        }
-        .totals td {
-            padding: 3px 0;
-        }
-        .totals .label {
-            text-align: right;
-            padding-right: 12px;
-        }
-        .totals .value {
-            text-align: right;
-            width: 140px;
-            font-weight: 600;
-        }
-        .total-row .label,
-        .total-row .value {
-            font-family: DejaVu Serif, serif;
-            color: #1e2b59;
+
+        .item-title {
             font-weight: 700;
-            font-size: 24px;
-            padding-top: 6px;
+            font-size: 10px;
+            color: #333333;
         }
-        .signature-wrap {
-            width: 100%;
-            margin-top: 12px;
-            margin-bottom: 22px;
-            page-break-inside: avoid;
-        }
-        .signature-box {
-            width: 260px;
-            margin-left: auto;
-            text-align: center;
-            border-top: 1px solid #e2e8f0;
-            padding-top: 8px;
-        }
-        .signature-box img {
-            max-height: 52px;
-            max-width: 250px;
-        }
-        .footer {
-            width: 100%;
-            margin-top: 8px;
-            page-break-inside: avoid;
-        }
-        .footer td {
-            vertical-align: top;
-        }
-        .thank-you {
-            font-family: DejaVu Serif, serif;
-            color: #1e2b59;
-            font-size: 50px;
-            font-style: italic;
-            font-weight: 700;
-            line-height: 1;
-        }
-        .terms {
-            border-left: 2px solid #1e2b59;
-            padding-left: 12px;
-            width: 300px;
-        }
-        .terms .head {
-            font-family: DejaVu Serif, serif;
-            color: #d4534f;
-            font-weight: 700;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-            font-size: 18px;
-        }
-        .terms p {
-            margin: 0 0 5px;
+
+        .item-subtitle {
+            font-size: 9px;
+            color: #666666;
+            margin-top: 2px;
             line-height: 1.3;
+        }
+
+        /* ===== TOTALS ===== */
+        .totals-wrapper {
+            width: 100%;
+            margin-top: 10px;
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+
+        .totals-table {
+            width: 280px;
+            margin-left: auto;
+            border-collapse: collapse;
+        }
+
+        .totals-table td {
+            padding: 6px 12px;
+            font-size: 10px;
+        }
+
+        .totals-table .totals-label {
+            text-align: right;
+            font-weight: 700;
+            color: #555555;
+            background-color: #F5F5F5;
+            border: 1px solid #E5E5E5;
+            width: 120px;
+        }
+
+        .totals-table .totals-value {
+            text-align: right;
+            color: #333333;
+            border: 1px solid #E5E5E5;
+            width: 160px;
+        }
+
+        .totals-table .total-row .totals-label {
+            font-size: 12px;
+            color: #E8760A;
+            font-weight: 700;
+        }
+
+        .totals-table .total-row .totals-value {
+            font-size: 13px;
+            font-weight: 700;
+            color: #E8760A;
+        }
+
+        /* ===== PAYMENT INSTRUCTIONS ===== */
+        .payment-section {
+            margin-top: 30px;
+            page-break-inside: avoid;
+        }
+
+        .payment-divider {
+            border: none;
+            border-top: 3px solid #E8760A;
+            margin: 0 0 4px 0;
+        }
+
+        .payment-thin-divider {
+            border: none;
+            border-top: 1px solid #CCCCCC;
+            margin: 0 0 12px 0;
+        }
+
+        .payment-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #E8760A;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .payment-content {
+            font-size: 10px;
+            color: #333333;
+            line-height: 1.8;
+        }
+
+        .payment-content .label {
+            font-weight: 700;
+            color: #555555;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer-section {
+            margin-top: 30px;
+            text-align: center;
+            page-break-inside: avoid;
+        }
+
+        .footer-thanks {
+            font-size: 12px;
+            font-weight: 700;
+            color: #333333;
+            margin-bottom: 4px;
+        }
+
+        .footer-contact {
+            font-size: 9px;
+            color: #777777;
+            font-style: italic;
+            line-height: 1.5;
         }
     </style>
 </head>
 <body>
 <div class="page">
-    <table class="top">
+
+    <!-- HEADER: Logo + Company Info | INVOICE Title -->
+    <table class="header-table">
         <tr>
-            <td>
-                <h1 class="title">INVOICE</h1>
-                <div class="company">
-                    <div class="name">{{ $company['name'] }}</div>
-                    @foreach($company['address_lines'] as $line)
-                        <div>{{ $line }}</div>
-                    @endforeach
-                </div>
-            </td>
-            <td style="width:118px;">
+            <td class="logo-cell">
                 @if(file_exists($company['logo']))
                     <img class="logo-image" src="{{ $company['logo'] }}" alt="Logo">
                 @else
-                    <div class="logo-circle">LOGO</div>
+                    <div style="font-size:24px;font-weight:700;color:#E8760A;">CIRQON</div>
                 @endif
+                <div class="company-address">
+                    {{ $company['address_lines'][0] ?? 'No. 4 Light-Foot Boston Street' }}<br>
+                    {{ $company['address_lines'][1] ?? 'Via Radwon Street, Freetown' }}
+                </div>
+                <div class="company-phone">📞 {{ $company['phone'] ?? '+232 74 141141 | +232 79 576950' }}</div>
+            </td>
+            <td class="invoice-title-cell">
+                <h1 class="invoice-title">INVOICE</h1>
+                <div class="invoice-number"># {{ $invoice->invoice_number }}</div>
             </td>
         </tr>
     </table>
 
-    <table class="meta">
+    <!-- Orange divider line -->
+    <hr class="orange-divider">
+
+    <!-- BILL TO + DETAILS -->
+    <table class="meta-table">
         <tr>
-            <td>
-                <h2 class="section-label">BILL TO</h2>
-                <p class="meta-block">{{ $invoice->bill_to }}</p>
+            <td class="bill-to-cell">
+                <div class="section-title">BILL TO</div>
+                <hr class="thin-divider">
+                <div class="bill-to-content">
+                    {!! nl2br(e($invoice->bill_to)) !!}
+                    @if($invoice->ship_to)
+                        <br>{{ $invoice->ship_to }}
+                    @endif
+                </div>
             </td>
-            <td>
-                <h2 class="section-label">SHIP TO</h2>
-                <p class="meta-block">{{ $invoice->ship_to }}</p>
-            </td>
-            <td>
-                <table class="kv">
+            <td class="details-cell">
+                <div class="section-title">DETAILS</div>
+                <table class="details-table">
                     <tr>
-                        <td class="k">Invoice #</td>
-                        <td>{{ $invoice->invoice_number }}</td>
+                        <td class="details-label">Date:</td>
+                        <td class="details-value">{{ $invoice->invoice_date->format('n/j/Y') }}</td>
                     </tr>
                     <tr>
-                        <td class="k">Invoice Date</td>
-                        <td>{{ $invoice->invoice_date->format('d/m/Y') }}</td>
+                        <td class="details-label">Customer ID:</td>
+                        <td class="details-value">{{ $invoice->po_number ?: $invoice->invoice_number }}</td>
                     </tr>
+                    @if($invoice->due_date)
                     <tr>
-                        <td class="k">P.O.#</td>
-                        <td>{{ $invoice->po_number ?: '-' }}</td>
+                        <td class="details-label">Due Date:</td>
+                        <td class="details-value">{{ $invoice->due_date->format('n/j/Y') }}</td>
                     </tr>
+                    @endif
                     <tr>
-                        <td class="k">Customer</td>
-                        <td>{{ $invoice->customer_name }}</td>
-                    </tr>
-                    <tr>
-                        <td class="k">Organization</td>
-                        <td>{{ $invoice->organization }}</td>
-                    </tr>
-                    <tr>
-                        <td class="k">Due Date</td>
-                        <td>{{ $invoice->due_date->format('d/m/Y') }}</td>
+                        <td class="details-label">Organization:</td>
+                        <td class="details-value">{{ $invoice->organization }}</td>
                     </tr>
                 </table>
             </td>
         </tr>
     </table>
 
-    <div class="divider"></div>
-
+    <!-- ITEMS TABLE -->
     <table class="items">
         <thead>
             <tr>
-                <th style="width:75px;">QTY</th>
-                <th>DESCRIPTION</th>
-                <th style="width:120px;" class="t-right">UNIT PRICE</th>
-                <th style="width:120px;" class="t-right">AMOUNT</th>
+                <th style="width:50%;">DESCRIPTION</th>
+                <th style="width:10%;text-align:center;">QTY</th>
+                <th style="width:20%;" class="t-right">UNIT PRICE</th>
+                <th style="width:20%;" class="t-right">AMOUNT</th>
             </tr>
         </thead>
         <tbody>
             @foreach($invoice->items as $item)
                 <tr>
-                    <td>{{ $item->quantity }}</td>
-                    <td>{{ $item->description }}</td>
-                    <td class="t-right">NLe {{ number_format((float) $item->unit_price, 2) }}</td>
-                    <td class="t-right">NLe {{ number_format((float) $item->amount, 2) }}</td>
+                    <td>
+                        <div class="item-title">{{ $item->description }}</div>
+                    </td>
+                    <td style="text-align:center;">{{ $item->quantity }}</td>
+                    <td class="t-right">{{ number_format((float) $item->unit_price, 2) }} LE</td>
+                    <td class="t-right">{{ number_format((float) $item->amount, 2) }} LE</td>
                 </tr>
             @endforeach
         </tbody>
     </table>
 
-    <table class="totals">
-        <tr>
-            <td class="label">Subtotal</td>
-            <td class="value">NLe {{ number_format((float) $invoice->subtotal, 2) }}</td>
-        </tr>
-        <tr>
-            <td class="label">Sales Tax</td>
-            <td class="value">NLe {{ number_format((float) $invoice->tax, 2) }}</td>
-        </tr>
-        <tr class="total-row">
-            <td class="label">TOTAL</td>
-            <td class="value">NLe {{ number_format((float) $invoice->total, 2) }}</td>
-        </tr>
-    </table>
+    <!-- TOTALS -->
+    <div class="totals-wrapper">
+        <table class="totals-table">
+            <tr>
+                <td class="totals-label">SUB TOTAL</td>
+                <td class="totals-value">{{ number_format((float) $invoice->subtotal, 2) }} LE</td>
+            </tr>
+            <tr>
+                <td class="totals-label">DISCOUNT</td>
+                <td class="totals-value">{{ $invoice->tax > 0 ? number_format((float) $invoice->tax, 2) . ' LE' : '-' }}</td>
+            </tr>
+            <tr class="total-row">
+                <td class="totals-label">TOTAL</td>
+                <td class="totals-value">{{ number_format((float) $invoice->total, 2) }} LE</td>
+            </tr>
+        </table>
+    </div>
 
-    <div class="signature-wrap">
-        <div class="signature-box">
-            @if(file_exists($company['signature']))
-                <img src="{{ $company['signature'] }}" alt="Signature">
-            @else
-                <div style="font-size:30px;font-style:italic;font-weight:700;color:#1e2b59;">{{ $company['issuer_name'] }}</div>
-            @endif
-            <div style="margin-top:6px;font-size:13px;font-weight:700;color:#1e2b59;">{{ $company['issuer_name'] }}</div>
+    <!-- PAYMENT INSTRUCTIONS -->
+    <div class="payment-section">
+        <hr class="payment-divider">
+        <hr class="payment-thin-divider">
+        <div class="payment-title">PAYMENT INSTRUCTIONS</div>
+        <div class="payment-content">
+            Please make payment to:<br>
+            <span class="label">Bank:</span> {{ $company['bank'] ?? 'UBA' }}<br>
+            <span class="label">Account Name:</span> {{ $company['account_name'] ?? 'Wickburn Services SL LTD' }}<br>
+            <span class="label">Account No:</span> {{ $company['account_no'] ?? '5401-1003-000922-9' }}<br>
+            <span class="label">IBAN:</span> {{ $company['iban'] ?? '010401100300092257' }}<br>
+            <span class="label">BIC/SWIFT CODE:</span> {{ $company['swift_code'] ?? 'UNAFSLFR' }}
         </div>
     </div>
 
-    <table class="footer">
-        <tr>
-            <td>
-                <div class="thank-you">Thank you</div>
-            </td>
-            <td class="terms">
-                <div class="head">Terms & Conditions</div>
-                @foreach($company['terms'] as $line)
-                    <p>{{ $line }}</p>
-                @endforeach
-            </td>
-        </tr>
-    </table>
+    <!-- FOOTER -->
+    <div class="footer-section">
+        <div class="footer-thanks">Thank you for your business!</div>
+        <div class="footer-contact">
+            If you have any questions about this invoice, please contact<br>
+            {{ $company['contact_person'] ?? 'James Cole' }} | {{ $company['phone'] ?? '+232 79576950' }} | {{ $company['contact_email'] ?? 'Jamesericksoncole57@gmail.com' }}
+        </div>
+    </div>
+
 </div>
 </body>
 </html>

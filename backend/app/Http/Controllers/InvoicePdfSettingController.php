@@ -21,7 +21,7 @@ class InvoicePdfSettingController extends Controller
         $validated = $request->validated();
 
         $settings = InvoicePdfSetting::query()->firstOrCreate([], [
-            'company_name' => 'East Repair Inc.',
+            'company_name' => 'CIRQON Electronics',
             'issuer_name' => 'Administrator',
         ]);
 
@@ -54,7 +54,7 @@ class InvoicePdfSettingController extends Controller
     {
         if (! $settings) {
             return [
-                'company_name' => 'East Repair Inc.',
+                'company_name' => 'CIRQON Electronics',
                 'issuer_name' => 'Administrator',
                 'logo_path' => null,
                 'signature_path' => null,

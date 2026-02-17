@@ -1,4 +1,9 @@
-function FilterBar({ filters, onChange, onReset, onApply }) {
+function FilterBar({
+  filters = { invoice_number: '', customer_name: '', organization: '', date: '' },
+  onChange = () => {},
+  onReset = () => {},
+  onApply = () => {},
+}) {
   const handleSubmit = (event) => {
     event.preventDefault();
     onApply();

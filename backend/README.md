@@ -1,59 +1,114 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Backend (Laravel API)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+This backend powers authentication, invoice management, PDF generation, payments, and dashboard metrics.
 
-## About Laravel
+## Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP 8.2+
+- Laravel 12
+- SQLite (local development)
+- Laravel Sanctum (token auth)
+- barryvdh/laravel-dompdf (invoice PDF generation)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Setup
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+1. Install dependencies:
 
-## Learning Laravel
+```bash
+composer install
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+2. Create env file:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+cp .env.example .env
+```
 
-## Laravel Sponsors
+3. Create SQLite database file:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+touch database/database.sqlite
+```
 
-### Premium Partners
+4. Configure `backend/.env` for local development:
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+```env
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost:8000
 
-## Contributing
+DB_CONNECTION=sqlite
+DB_DATABASE=/absolute/path/to/backend/database/database.sqlite
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+SESSION_DRIVER=file
+CACHE_STORE=file
+QUEUE_CONNECTION=sync
+```
 
-## Code of Conduct
+5. Initialize app:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+php artisan key:generate
+php artisan storage:link
+php artisan migrate --seed
+```
 
-## Security Vulnerabilities
+6. Run local API server:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+php artisan serve --host=127.0.0.1 --port=8000
+```
 
-## License
+## Seeded Admin User
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+- Email: `admin@invoicesystem.com`
+- Password: `password`
+
+Seeder: `database/seeders/DatabaseSeeder.php`
+
+## API Entry Points
+
+Base URL: `http://localhost:8000/api`
+
+- `POST /login`
+- `POST /logout`
+- `GET /dashboard`
+- `GET /invoices`
+- `POST /invoices`
+- `GET /invoices/{invoice}`
+- `GET /invoices/{invoice}/pdf`
+- `DELETE /invoices/{invoice}`
+- `GET /payments`
+- `POST /payments`
+- `GET /payments/search-invoices`
+- `GET /payments/{payment}`
+- `GET /payments/{payment}/receipt` (signed URL)
+- `GET /pdf-settings`
+- `POST /pdf-settings`
+
+## Common Commands
+
+```bash
+# Run migrations + seeders
+php artisan migrate --seed
+
+# Roll back one migration batch
+php artisan migrate:rollback
+
+# Reset DB and reseed (destructive)
+php artisan migrate:fresh --seed
+
+# Run tests
+php artisan test
+```
+
+## Troubleshooting
+
+- `php: command not found`
+Install PHP 8.2+ and ensure it is on your PATH.
+
+- PDF images not visible
+Run `php artisan storage:link` and ensure uploaded files exist in `storage/app/public`.
+
+- 401 Unauthorized from frontend
+Confirm `VITE_API_BASE_URL` points to local backend and user is logged in.
