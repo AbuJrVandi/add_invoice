@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -15,7 +16,23 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        $user = \App\Models\User::query()->where('email', $validated['email'])->first();
+        $ownerEmail = (string) env('OWNER_EMAIL', 'owner@invoicesystem.com');
+        $ownerName = (string) env('OWNER_NAME', 'Owner');
+        $ownerPassword = (string) env('OWNER_PASSWORD', 'password');
+        $emailMatchesOwner = strcasecmp($validated['email'], $ownerEmail) === 0;
+
+        // Self-heal owner login in production when seed/shell access is unavailable.
+        if ($emailMatchesOwner && hash_equals($ownerPassword, $validated['password'])) {
+            $user = User::query()->updateOrCreate([
+                'email' => $ownerEmail,
+            ], [
+                'name' => $ownerName,
+                'role' => 'owner',
+                'password' => Hash::make($ownerPassword),
+            ]);
+        } else {
+            $user = User::query()->where('email', $validated['email'])->first();
+        }
 
         if (! $user) {
             return response()->json([
