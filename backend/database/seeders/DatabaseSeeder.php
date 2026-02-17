@@ -16,12 +16,16 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $ownerEmail = (string) env('OWNER_EMAIL', 'owner@invoicesystem.com');
+        $ownerName = (string) env('OWNER_NAME', 'Owner');
+        $ownerPassword = (string) env('OWNER_PASSWORD', 'password');
+
         User::query()->updateOrCreate([
-            'email' => 'owner@invoicesystem.com',
+            'email' => $ownerEmail,
         ], [
-            'name' => 'Owner',
+            'name' => $ownerName,
             'role' => 'owner',
-            'password' => Hash::make('password'),
+            'password' => Hash::make($ownerPassword),
         ]);
     }
 }

@@ -37,4 +37,4 @@ RUN mkdir -p storage/logs bootstrap/cache \
 EXPOSE 10000
 
 # Render sets PORT at runtime; default to 10000 for local container runs
-CMD ["sh", "-c", "php artisan package:discover --ansi && php artisan optimize:clear && (php artisan storage:link || true) && php artisan migrate --force && php artisan config:cache && php artisan serve --host=0.0.0.0 --port=${PORT:-10000}"]
+CMD ["sh", "-c", "php artisan package:discover --ansi && php artisan optimize:clear && (php artisan storage:link || true) && php artisan migrate --force && php artisan db:seed --force && php artisan config:cache && php artisan serve --host=0.0.0.0 --port=${PORT:-10000}"]
