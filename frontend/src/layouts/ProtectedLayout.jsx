@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import useResponsive from '../hooks/useResponsive';
 
 const PAGE_TITLES = {
   '/': 'Dashboard',
@@ -8,24 +9,63 @@ const PAGE_TITLES = {
   '/invoices': 'Invoices',
   '/invoices/create': 'Create Invoice',
   '/payments': 'Payments',
-  '/payments/:paymentId/receipt': 'Receipt',
   '/pdf-settings': 'PDF Settings',
 };
 
-function ProtectedLayout() {
-  const { token, logout, user, ready } = useAuth();
-  const location = useLocation();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+function resolvePageTitle(pathname) {
+  if (pathname.includes('/invoices/') && pathname.includes('/view')) {
+    return 'Invoice PDF';
+  }
+  if (pathname.includes('/payments/') && pathname.includes('/receipt')) {
+    return 'Receipt';
+  }
 
-  // Dynamic navigation based on role
-  const navItems = user?.role === 'owner'
-    ? [{ to: '/owner/dashboard', label: 'Analytics', icon: '📈', exact: true }]
-    : [
+  return PAGE_TITLES[pathname] || 'Workspace';
+}
+
+function navConfigForRole(role) {
+  if (role === 'owner') {
+    return {
+      sideNav: [
+        { to: '/owner/dashboard', label: 'Analytics', icon: '📈', exact: true },
+      ],
+      mobileNav: [
+        { to: '/owner/dashboard', label: 'Home', icon: '📈', exact: true },
+      ],
+    };
+  }
+
+  return {
+    sideNav: [
       { to: '/', label: 'Overview', icon: '📊', exact: true },
       { to: '/invoices', label: 'Invoices', icon: '📋' },
       { to: '/payments', label: 'Payments', icon: '💰' },
       { to: '/pdf-settings', label: 'PDF Settings', icon: '⚙️' },
-    ];
+    ],
+    mobileNav: [
+      { to: '/', label: 'Home', icon: '🏠', exact: true },
+      { to: '/invoices', label: 'Invoices', icon: '📋' },
+      { to: '/payments', label: 'Payments', icon: '💳' },
+      { to: '/pdf-settings', label: 'Settings', icon: '⚙️' },
+    ],
+  };
+}
+
+export default function ProtectedLayout() {
+  const { token, logout, user, ready } = useAuth();
+  const location = useLocation();
+  const { isMobile, isTablet, isDesktop } = useResponsive();
+
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (isTablet) {
+      setSidebarCollapsed(true);
+    }
+    if (isDesktop) {
+      setSidebarCollapsed(false);
+    }
+  }, [isTablet, isDesktop]);
 
   if (!ready) {
     return <div className="content loading-screen">Loading workspace...</div>;
@@ -35,24 +75,55 @@ function ProtectedLayout() {
     return <Navigate to="/login" replace />;
   }
 
+  const pageTitle = resolvePageTitle(location.pathname);
   const userInitial = user?.email ? user.email.charAt(0).toUpperCase() : 'A';
   const userName = user?.name || user?.role || 'User';
 
-  // Determine page title
-  let pageTitle = PAGE_TITLES[location.pathname] || 'Page';
-  if (location.pathname.includes('/invoices/') && location.pathname.includes('/view')) {
-    pageTitle = 'Invoice PDF';
-  }
-  if (location.pathname.includes('/payments/') && location.pathname.includes('/receipt')) {
-    pageTitle = 'Receipt';
+  const nav = navConfigForRole(user?.role);
+  const sideNav = nav.sideNav;
+  const mobileNav = nav.mobileNav;
+
+  if (isMobile) {
+    return (
+      <div className="mobile-app-shell">
+        <header className="mobile-topbar">
+          <div className="mobile-topbar-title">
+            <h1>{pageTitle}</h1>
+            <p>{user?.email}</p>
+          </div>
+          <button type="button" className="mobile-logout-icon" onClick={logout} aria-label="Sign out">
+            ⎋
+          </button>
+        </header>
+
+        <main className="mobile-content">
+          <Outlet />
+        </main>
+
+        {user?.role !== 'owner' && location.pathname !== '/invoices/create' ? (
+          <Link to="/invoices/create" className="mobile-fab" aria-label="Create Invoice">
+            <span aria-hidden="true">＋</span>
+            <strong>Create Invoice</strong>
+          </Link>
+        ) : null}
+
+        <nav className="mobile-bottom-nav" aria-label="Mobile primary navigation">
+          {mobileNav.map((item) => (
+            <NavLink key={item.to} to={item.to} end={item.exact} className={({ isActive }) => (isActive ? 'active' : '')}>
+              <span className="mobile-nav-icon" aria-hidden="true">{item.icon}</span>
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+    );
   }
 
   return (
-    <div className={`app-shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
-      {/* Sidebar */}
+    <div className={`app-shell ${isTablet ? 'tablet-shell' : 'desktop-shell'}${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
       <aside className="sidebar" id="sidebar">
         <div className="sidebar-brand">
-          <img src="/set.png" alt="CIRQON" className="sidebar-brand-logo" />
+          <img src="/logo.png" alt="CIRQON" className="sidebar-brand-logo" />
           {!sidebarCollapsed && (
             <div className="sidebar-brand-text">
               <span className="sidebar-brand-name">CIRQON</span>
@@ -67,14 +138,11 @@ function ProtectedLayout() {
           >
             {sidebarCollapsed ? '▶' : '◀'}
           </button>
-          <button type="button" onClick={logout} className="mobile-logout-btn">
-            Log Out
-          </button>
         </div>
 
         <nav className="sidebar-nav" id="sidebar-nav">
           {!sidebarCollapsed && <div className="sidebar-nav-section">Main</div>}
-          {navItems.map((item) => (
+          {sideNav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -91,9 +159,7 @@ function ProtectedLayout() {
         <div className="sidebar-footer">
           <div className="sidebar-user-info">
             <div className="sidebar-user-avatar">{userInitial}</div>
-            {!sidebarCollapsed && (
-              <div className="sidebar-user-email">{user?.email}</div>
-            )}
+            {!sidebarCollapsed && <div className="sidebar-user-email">{user?.email}</div>}
           </div>
           <button type="button" onClick={logout} className="sidebar-logout-btn" id="sidebar-logout">
             {sidebarCollapsed ? '🚪' : '← Sign Out'}
@@ -101,7 +167,6 @@ function ProtectedLayout() {
         </div>
       </aside>
 
-      {/* Top Navbar */}
       <header className="top-navbar" id="top-navbar">
         <h1 className="navbar-page-title">{pageTitle}</h1>
 
@@ -118,12 +183,9 @@ function ProtectedLayout() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="content" id="main-content">
         <Outlet />
       </main>
     </div>
   );
 }
-
-export default ProtectedLayout;

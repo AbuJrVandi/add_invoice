@@ -11,7 +11,17 @@ const PAYMENT_METHOD_LABELS = {
 };
 
 function formatCurrency(value) {
-  return `NLe ${Number(value || 0).toFixed(2)}`;
+  return `NLe ${new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0))}`;
+}
+
+function formatCurrencyAmount(value) {
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0));
 }
 
 function formatCompact(value) {
@@ -383,9 +393,27 @@ export default function OwnerDashboard() {
               <div className="owner-ops-status-donut-center">{formatPercent(analytics.overview.invoice_completion_rate)}</div>
             </div>
             <div className="owner-ops-metrics-list">
-              <p><span>Cash today</span><strong>{formatCurrency(analytics.liquidity.today)}</strong></p>
-              <p><span>Cash this month</span><strong>{formatCurrency(analytics.liquidity.this_month)}</strong></p>
-              <p><span>Outstanding</span><strong>{formatCurrency(analytics.risk.outstanding_balance)}</strong></p>
+              <p className="owner-ops-metric-row">
+                <span className="owner-ops-metric-label">Cash today</span>
+                <strong className="owner-ops-metric-value">
+                  <span className="owner-ops-metric-currency">NLe</span>
+                  <span className="owner-ops-metric-amount">{formatCurrencyAmount(analytics.liquidity.today)}</span>
+                </strong>
+              </p>
+              <p className="owner-ops-metric-row">
+                <span className="owner-ops-metric-label">Cash this month</span>
+                <strong className="owner-ops-metric-value">
+                  <span className="owner-ops-metric-currency">NLe</span>
+                  <span className="owner-ops-metric-amount">{formatCurrencyAmount(analytics.liquidity.this_month)}</span>
+                </strong>
+              </p>
+              <p className="owner-ops-metric-row">
+                <span className="owner-ops-metric-label">Outstanding</span>
+                <strong className="owner-ops-metric-value">
+                  <span className="owner-ops-metric-currency">NLe</span>
+                  <span className="owner-ops-metric-amount">{formatCurrencyAmount(analytics.risk.outstanding_balance)}</span>
+                </strong>
+              </p>
             </div>
           </div>
         </article>

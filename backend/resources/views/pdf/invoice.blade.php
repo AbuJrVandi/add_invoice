@@ -6,7 +6,6 @@
     <style>
         @page {
             margin: 15mm 15mm 20mm 15mm;
-            size: A4 portrait;
         }
 
         body {
@@ -243,9 +242,30 @@
         }
 
         /* ===== PAYMENT INSTRUCTIONS ===== */
-        .payment-section {
+        .payment-signature-section {
             margin-top: 30px;
             page-break-inside: avoid;
+        }
+
+        .payment-signature-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .payment-signature-table td {
+            vertical-align: top;
+        }
+
+        .payment-cell {
+            width: 64%;
+            padding-right: 24px;
+        }
+
+        .signature-cell {
+            width: 36%;
+            text-align: center;
+            border-left: 1px solid #E5E5E5;
+            padding-left: 18px;
         }
 
         .payment-divider {
@@ -278,6 +298,44 @@
         .payment-content .label {
             font-weight: 700;
             color: #555555;
+        }
+
+        .signature-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #E8760A;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .signature-image {
+            width: 230px;
+            max-width: 100%;
+            max-height: 130px;
+            object-fit: contain;
+            margin: 8px auto 10px;
+            display: block;
+        }
+
+        .signature-line {
+            width: 88%;
+            margin: 14px auto 8px;
+            border-top: 1px solid #BDBDBD;
+        }
+
+        .signature-name {
+            font-size: 12px;
+            font-weight: 700;
+            color: #333333;
+        }
+
+        .signature-role {
+            font-size: 10px;
+            color: #666666;
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
         }
 
         /* ===== FOOTER ===== */
@@ -314,11 +372,7 @@
                 @else
                     <div style="font-size:24px;font-weight:700;color:#E8760A;">CIRQON</div>
                 @endif
-                <div class="company-address">
-                    {{ $company['address_lines'][0] ?? 'No. 4 Light-Foot Boston Street' }}<br>
-                    {{ $company['address_lines'][1] ?? 'Via Radwon Street, Freetown' }}
-                </div>
-                <div class="company-phone">📞 {{ $company['phone'] ?? '+232 74 141141 | +232 79 576950' }}</div>
+               
             </td>
             <td class="invoice-title-cell">
                 <h1 class="invoice-title">INVOICE</h1>
@@ -402,7 +456,7 @@
             </tr>
             <tr>
                 <td class="totals-label">DISCOUNT</td>
-                <td class="totals-value">{{ $invoice->tax > 0 ? number_format((float) $invoice->tax, 2) . ' LE' : '-' }}</td>
+                <td class="totals-value">{{ $invoice->tax > 0 ? '- ' . number_format((float) $invoice->tax, 2) . ' LE' : '0.00 LE' }}</td>
             </tr>
             <tr class="total-row">
                 <td class="totals-label">TOTAL</td>
@@ -412,18 +466,33 @@
     </div>
 
     <!-- PAYMENT INSTRUCTIONS -->
-    <div class="payment-section">
-        <hr class="payment-divider">
-        <hr class="payment-thin-divider">
-        <div class="payment-title">PAYMENT INSTRUCTIONS</div>
-        <div class="payment-content">
-            Please make payment to:<br>
-            <span class="label">Bank:</span> {{ $company['bank'] ?? 'UBA' }}<br>
-            <span class="label">Account Name:</span> {{ $company['account_name'] ?? 'Wickburn Services SL LTD' }}<br>
-            <span class="label">Account No:</span> {{ $company['account_no'] ?? '5401-1003-000922-9' }}<br>
-            <span class="label">IBAN:</span> {{ $company['iban'] ?? '010401100300092257' }}<br>
-            <span class="label">BIC/SWIFT CODE:</span> {{ $company['swift_code'] ?? 'UNAFSLFR' }}
-        </div>
+    <div class="payment-signature-section">
+        <table class="payment-signature-table">
+            <tr>
+                <td class="payment-cell">
+                    <hr class="payment-divider">
+                    <hr class="payment-thin-divider">
+                    <div class="payment-title">PAYMENT INSTRUCTIONS</div>
+                    <div class="payment-content">
+                        Please make payment to:<br>
+                        <span class="label">Bank:</span> {{ $company['bank'] ?? 'UBA' }}<br>
+                        <span class="label">Account Name:</span> {{ $company['account_name'] ?? 'Wickburn Services SL LTD' }}<br>
+                        <span class="label">Account No:</span> {{ $company['account_no'] ?? '5401-1003-000922-9' }}<br>
+                        <span class="label">IBAN:</span> {{ $company['iban'] ?? '010401100300092257' }}<br>
+                        <span class="label">BIC/SWIFT CODE:</span> {{ $company['swift_code'] ?? 'UNAFSLFR' }}
+                    </div>
+                </td>
+                <td class="signature-cell">
+                    <div class="signature-title">Authorized Signature</div>
+                    @if(!empty($company['signature']) && file_exists($company['signature']))
+                        <img class="signature-image" src="{{ $company['signature'] }}" alt="Signature">
+                    @endif
+                    <div class="signature-line"></div>
+                    <div class="signature-name">{{ $company['issuer_name'] ?? 'CEO- Vandi Abu' }}</div>
+                    <div class="signature-role">Chief Executive Officer</div>
+                </td>
+            </tr>
+        </table>
     </div>
 
     <!-- FOOTER -->

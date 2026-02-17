@@ -1,26 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-
-const SAVED_EMAIL_KEY = 'ims_saved_email';
 
 function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({ email: 'admin@invoicesystem.com', password: 'password' });
-  const [saveAccount, setSaveAccount] = useState(false);
+  const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const savedEmail = localStorage.getItem(SAVED_EMAIL_KEY);
-    if (savedEmail) {
-      setForm((prev) => ({ ...prev, email: savedEmail }));
-      setSaveAccount(true);
-    }
-  }, []);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -29,11 +18,6 @@ function Login() {
 
     try {
       await login(form.email, form.password);
-      if (saveAccount) {
-        localStorage.setItem(SAVED_EMAIL_KEY, form.email.trim());
-      } else {
-        localStorage.removeItem(SAVED_EMAIL_KEY);
-      }
       navigate('/');
     } catch (err) {
       setError(err?.response?.data?.message || 'Login failed. Please check your credentials.');
@@ -68,7 +52,7 @@ function Login() {
         </section>
 
         {/* Right Login Card */}
-        <form className="auth-panel auth-card" onSubmit={handleSubmit} id="login-form">
+        <form className="auth-panel auth-card" onSubmit={handleSubmit} id="login-form" autoComplete="off">
           <img
             src="/set.png"
             alt="CIRQON"
@@ -86,7 +70,7 @@ function Login() {
               placeholder="admin@invoicesystem.com"
               value={form.email}
               onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-              autoComplete="email"
+              autoComplete="off"
             />
           </div>
 
@@ -100,7 +84,7 @@ function Login() {
                 placeholder="Enter your password"
                 value={form.password}
                 onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
-                autoComplete="current-password"
+                autoComplete="new-password"
               />
               <button
                 type="button"
@@ -114,14 +98,6 @@ function Login() {
           </div>
 
           <div className="auth-options">
-            <label className="auth-check">
-              <input
-                type="checkbox"
-                checked={saveAccount}
-                onChange={(e) => setSaveAccount(e.target.checked)}
-              />
-              <span>Remember me</span>
-            </label>
             <a href="#" className="auth-forgot" onClick={(e) => e.preventDefault()}>Forgot password?</a>
           </div>
 

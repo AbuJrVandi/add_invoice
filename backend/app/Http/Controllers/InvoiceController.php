@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class InvoiceController extends Controller
@@ -97,7 +98,14 @@ class InvoiceController extends Controller
             $pdf = Pdf::loadView('pdf.invoice', [
                 'invoice' => $invoice->fresh('items'),
                 'company' => $companyData,
-            ])->setPaper('a4', 'portrait');
+            ]);
+
+            $paper = $this->resolveInvoicePaper($invoice->fresh('items'));
+            if (is_array($paper['size'])) {
+                $pdf->setPaper($paper['size']);
+            } else {
+                $pdf->setPaper($paper['size'], $paper['orientation']);
+            }
 
             Storage::disk('public')->put($relativePath, $pdf->output());
 
@@ -154,7 +162,14 @@ class InvoiceController extends Controller
         $pdf = Pdf::loadView('pdf.invoice', [
             'invoice' => $previewInvoice,
             'company' => $this->buildCompanyData(),
-        ])->setPaper('a4', 'portrait');
+        ]);
+
+        $paper = $this->resolveInvoicePaper($previewInvoice);
+        if (is_array($paper['size'])) {
+            $pdf->setPaper($paper['size']);
+        } else {
+            $pdf->setPaper($paper['size'], $paper['orientation']);
+        }
 
         $filename = 'invoice-preview-'.$invoiceNumber.'.pdf';
 
@@ -258,7 +273,7 @@ class InvoiceController extends Controller
             'phone' => '+232 74 141141 | +232 79 576950',
             'logo' => $logoPath,
             'signature' => $signaturePath,
-            'issuer_name' => $settings?->issuer_name ?? 'James Cole',
+            'issuer_name' => $settings?->issuer_name ?? 'CEO- Vandi Abu',
             'terms' => [
                 'Payment is due within 15 days',
                 'Please make checks payable to: '.($settings?->company_name ?? 'CIRQON Electronics').'.',
@@ -269,7 +284,7 @@ class InvoiceController extends Controller
             'account_no' => '5401-1003-000922-9',
             'iban' => '010401100300092257',
             'swift_code' => 'UNAFSLFR',
-            'contact_person' => 'James Cole',
+            'contact_person' => 'Vandi Abu',
             'contact_email' => 'Jamesericksoncole57@gmail.com',
         ];
     }
@@ -297,14 +312,60 @@ class InvoiceController extends Controller
         }
 
         $subtotal = round($subtotal, 2);
-        $tax = round((float) ($validated['tax'] ?? 0), 2);
-        $total = round($subtotal + $tax, 2);
+        $discount = round((float) ($validated['tax'] ?? 0), 2);
+
+        if ($discount > $subtotal) {
+            throw ValidationException::withMessages([
+                'tax' => ['Discount cannot be greater than subtotal.'],
+            ]);
+        }
+
+        // Accounting rule: discount reduces the invoice total.
+        $total = round($subtotal - $discount, 2);
 
         return [
             'items' => $computedItems,
             'subtotal' => $subtotal,
-            'tax' => $tax,
+            'tax' => $discount,
             'total' => $total,
+        ];
+    }
+
+    /**
+     * Keep invoices on a single page by dynamically expanding paper size.
+     * - <= 3 items: standard A4 portrait
+     * - > 3 items: start from A3 height and grow further when needed
+     */
+    private function resolveInvoicePaper(Invoice $invoice): array
+    {
+        $items = $invoice->relationLoaded('items')
+            ? $invoice->items
+            : $invoice->items()->get();
+
+        $itemCount = $items->count();
+        if ($itemCount <= 3) {
+            return [
+                'size' => 'a4',
+                'orientation' => 'portrait',
+            ];
+        }
+
+        // A3 portrait base in points: width 842, height 1191
+        $baseWidth = 842;
+        $baseHeight = 1191;
+
+        // Estimate vertical demand from item count + description density.
+        $estimatedDescriptionLines = $items->sum(
+            fn (InvoiceItem $item): int => max((int) ceil(mb_strlen((string) $item->description) / 85), 1)
+        );
+
+        $estimatedRows = (int) $itemCount + (int) $estimatedDescriptionLines;
+        $extraHeight = max(0, $estimatedRows - 14) * 24;
+        $targetHeight = $baseHeight + $extraHeight;
+
+        return [
+            'size' => [0, 0, $baseWidth, $targetHeight],
+            'orientation' => null,
         ];
     }
 

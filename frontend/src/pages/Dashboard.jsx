@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import useResponsive from '../hooks/useResponsive';
 
 function Dashboard() {
+  const { isMobile, isTablet } = useResponsive();
   const [data, setData] = useState({
     total_invoices: 0,
     cash_collected: 0,
@@ -34,9 +36,9 @@ function Dashboard() {
   }
 
   return (
-    <div className="start-grid">
+    <div className={`start-grid dashboard-page ${isMobile ? 'dashboard-mobile' : ''}`}>
       {/* Stats Overview */}
-      <div className="stats-grid">
+      <div className={`stats-grid ${isTablet ? 'stats-grid-tablet' : ''}`}>
         <article className="stat-card">
           <p>Cash Collected (Liquidity)</p>
           <h3 className="text-primary">NLe {Number(data.cash_collected).toFixed(2)}</h3>
@@ -59,11 +61,27 @@ function Dashboard() {
           </span>
         </article>
 
-        <article className="stat-card highlight-card">
-          <p>Quick Actions</p>
-          <div className="action-buttons">
-            <Link className="button btn-sm" to="/invoices/create">➕ New Invoice</Link>
-            <Link className="button btn-sm btn-outline" to="/payments">💰 Record Payment</Link>
+        <article className="stat-card highlight-card quick-actions-card">
+          <div className="quick-actions-head">
+            <p>Quick Actions</p>
+            <span>Shortcuts</span>
+          </div>
+
+          <div className="quick-actions-grid">
+            <Link className="quick-action-btn primary" to="/invoices/create">
+              <strong>Create Invoice</strong>
+              <small>Issue new invoice</small>
+            </Link>
+
+            <Link className="quick-action-btn" to="/payments">
+              <strong>Record Payment</strong>
+              <small>Capture receipt</small>
+            </Link>
+
+            <Link className="quick-action-btn" to="/invoices">
+              <strong>View Invoices</strong>
+              <small>Manage open balances</small>
+            </Link>
           </div>
         </article>
       </div>
@@ -75,50 +93,83 @@ function Dashboard() {
           <Link to="/invoices" className="view-all">View All</Link>
         </div>
 
-        <div className="table-wrap">
-          <table className="table table-mobile">
-            <thead>
-              <tr>
-                <th>Invoice #</th>
-                <th>Customer</th>
-                <th>Status</th>
-                <th>Total</th>
-                <th>Balance</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.recent_invoices?.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="empty-state">
-                    No recent invoices found.
-                  </td>
-                </tr>
-              ) : (
-                data.recent_invoices.map((inv) => (
-                  <tr key={inv.id}>
-                    <td data-label="Invoice #">
-                      <strong className="text-dark">{inv.invoice_number}</strong>
-                    </td>
-                    <td data-label="Customer">{inv.customer_name}</td>
-                    <td data-label="Status">
-                      <span className={`status-badge status-${inv.status || 'pending'}`}>
-                        {inv.status || 'Pending'}
-                      </span>
-                    </td>
-                    <td data-label="Total">
+        {isMobile ? (
+          <div className="dashboard-mobile-list">
+            {data.recent_invoices?.length === 0 ? (
+              <div className="empty-state">No recent invoices found.</div>
+            ) : (
+              data.recent_invoices.map((inv) => (
+                <article className="invoice-mobile-card dashboard-invoice-card" key={inv.id}>
+                  <div className="invoice-mobile-row-top">
+                    <strong>{inv.invoice_number}</strong>
+                    <span className={`status-badge status-${String(inv.status || 'pending').toLowerCase()}`}>
+                      {inv.status || 'Pending'}
+                    </span>
+                  </div>
+                  <p>{inv.customer_name}</p>
+                  <div className="invoice-mobile-kpis">
+                    <div>
+                      <small>Total</small>
                       <strong>NLe {Number(inv.total).toFixed(2)}</strong>
-                    </td>
-                    <td data-label="Balance">
-                      <span className={Number(inv.balance_remaining) > 0 ? 'text-danger' : 'text-success'}>
+                    </div>
+                    <div>
+                      <small>Balance</small>
+                      <strong className={Number(inv.balance_remaining) > 0 ? 'text-danger' : 'text-success'}>
                         NLe {Number(inv.balance_remaining).toFixed(2)}
-                      </span>
+                      </strong>
+                    </div>
+                  </div>
+                  <Link to={`/invoices/${inv.id}/view`} className="button button-outline">Open Invoice</Link>
+                </article>
+              ))
+            )}
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Invoice #</th>
+                  <th>Customer</th>
+                  <th>Status</th>
+                  <th>Total</th>
+                  <th>Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.recent_invoices?.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="empty-state">
+                      No recent invoices found.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  data.recent_invoices.map((inv) => (
+                    <tr key={inv.id}>
+                      <td>
+                        <strong className="text-dark">{inv.invoice_number}</strong>
+                      </td>
+                      <td>{inv.customer_name}</td>
+                      <td>
+                        <span className={`status-badge status-${String(inv.status || 'pending').toLowerCase()}`}>
+                          {inv.status || 'Pending'}
+                        </span>
+                      </td>
+                      <td>
+                        <strong>NLe {Number(inv.total).toFixed(2)}</strong>
+                      </td>
+                      <td>
+                        <span className={Number(inv.balance_remaining) > 0 ? 'text-danger' : 'text-success'}>
+                          NLe {Number(inv.balance_remaining).toFixed(2)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
     </div>

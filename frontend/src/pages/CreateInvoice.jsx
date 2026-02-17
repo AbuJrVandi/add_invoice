@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import InvoiceForm from '../components/InvoiceForm';
 import InvoicePreview from '../components/InvoicePreview';
 import api from '../services/api';
 
 function CreateInvoice() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const cloneId = searchParams.get('clone');
   const [loading, setLoading] = useState(false);
   const [numberLoading, setNumberLoading] = useState(true);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -18,24 +20,48 @@ function CreateInvoice() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const loadNextNumber = async () => {
+    const loadInitial = async () => {
       setNumberLoading(true);
       try {
-        const response = await api.get('/invoices/next-number');
-        setInvoiceNumber(response.data.invoice_number || '');
+        const numberResponse = await api.get('/invoices/next-number');
+        setInvoiceNumber(numberResponse.data.invoice_number || '');
+
+        if (cloneId) {
+          const cloneResponse = await api.get(`/invoices/${cloneId}`);
+          const source = cloneResponse.data;
+
+          if (source) {
+            setFormDraft({
+              customer_name: source.customer_name || '',
+              organization: source.organization || '',
+              bill_to: source.bill_to || '',
+              ship_to: source.ship_to || '',
+              invoice_date: source.invoice_date || '',
+              due_date: source.due_date || '',
+              po_number: source.po_number || '',
+              tax: Number(source.tax || 0),
+              items: Array.isArray(source.items) ? source.items.map((item) => ({
+                description: item.description || '',
+                quantity: Number(item.quantity || 1),
+                unit_price: Number(item.unit_price || 0),
+                amount: Number(item.amount || 0),
+              })) : [],
+            });
+          }
+        }
       } catch (err) {
         if (err?.response?.status === 401) {
           setError('Your session expired. Please log in again.');
           return;
         }
-        setError(err?.response?.data?.message || 'Failed to generate invoice number.');
+        setError(err?.response?.data?.message || 'Failed to prepare invoice form.');
       } finally {
         setNumberLoading(false);
       }
     };
 
-    loadNextNumber();
-  }, []);
+    loadInitial();
+  }, [cloneId]);
 
   useEffect(() => {
     return () => {

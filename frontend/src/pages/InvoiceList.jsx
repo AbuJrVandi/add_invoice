@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../services/api';
 import FilterBar from '../components/FilterBar';
 import InvoiceTable from '../components/InvoiceTable';
+import useResponsive from '../hooks/useResponsive';
 
 const defaultFilters = {
   invoice_number: '',
@@ -12,9 +13,11 @@ const defaultFilters = {
 };
 
 function InvoiceList() {
+  const { isMobile } = useResponsive();
   const [filters, setFilters] = useState(defaultFilters);
   const [draftFilters, setDraftFilters] = useState(defaultFilters);
   const [invoices, setInvoices] = useState([]);
+  const [visibleCount, setVisibleCount] = useState(10);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -45,6 +48,10 @@ function InvoiceList() {
   useEffect(() => {
     fetchInvoices(filters);
   }, [fetchInvoices, filters]);
+
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [filters, invoices.length]);
 
   const handleChange = (field, value) => {
     setDraftFilters((prev) => ({ ...prev, [field]: value }));
@@ -85,6 +92,16 @@ function InvoiceList() {
 
     return counts;
   }, [invoices]);
+
+  const visibleInvoices = useMemo(() => {
+    if (!isMobile) {
+      return invoices;
+    }
+
+    return invoices.slice(0, visibleCount);
+  }, [invoices, isMobile, visibleCount]);
+
+  const hasMoreMobileRows = isMobile && visibleCount < invoices.length;
 
   return (
     <div className="invoice-list-page stacked">
@@ -142,7 +159,13 @@ function InvoiceList() {
       />
 
       <div className="panel invoice-table-panel">
-        <InvoiceTable invoices={invoices} loading={loading} />
+        <InvoiceTable
+          invoices={visibleInvoices}
+          loading={loading}
+          hasMore={hasMoreMobileRows}
+          onLoadMore={() => setVisibleCount((prev) => prev + 10)}
+          onDataChanged={() => fetchInvoices(filters)}
+        />
       </div>
     </div>
   );

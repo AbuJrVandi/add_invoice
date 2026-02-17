@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import useResponsive from '../hooks/useResponsive';
 
 export default function PaymentModal({ invoice, onClose, onSuccess }) {
+    const { isMobile } = useResponsive();
     const [amount, setAmount] = useState('');
     const [method, setMethod] = useState('cash');
     const [notes, setNotes] = useState('');
@@ -46,7 +48,7 @@ export default function PaymentModal({ invoice, onClose, onSuccess }) {
 
     return (
         <div className="modal-overlay">
-            <div className="modal-content" style={{ maxWidth: '500px' }}>
+            <div className={`modal-content ${isMobile ? 'modal-content-mobile' : ''}`} style={isMobile ? undefined : { maxWidth: '500px' }}>
                 <div className="modal-header">
                     <h2>Record Payment</h2>
                     <button onClick={onClose} className="close-btn">&times;</button>
@@ -88,6 +90,7 @@ export default function PaymentModal({ invoice, onClose, onSuccess }) {
                             value={amount}
                             onChange={(e) => setAmount(e.target.value)}
                             className="input-lg"
+                            inputMode="decimal"
                         />
                     </div>
 
@@ -126,7 +129,7 @@ export default function PaymentModal({ invoice, onClose, onSuccess }) {
 
                     {error && <div className="error-message">{error}</div>}
 
-                    <div className="modal-actions">
+                    <div className={`modal-actions ${isMobile ? 'modal-actions-sticky' : ''}`}>
                         <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
                         <button type="submit" className="button btn-primary" disabled={loading}>
                             {loading ? 'Processing...' : `Confirm Payment`}
