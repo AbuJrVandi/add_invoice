@@ -8,12 +8,14 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\InvoicePdfSetting;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Throwable;
 
 class InvoiceController extends Controller
 {
@@ -65,51 +67,64 @@ class InvoiceController extends Controller
             $tax = $computed['tax'];
             $total = $computed['total'];
 
-            $requestedNumber = $validated['invoice_number'] ?? null;
-            $invoiceNumber = $requestedNumber && ! Invoice::query()->where('invoice_number', $requestedNumber)->exists()
-                ? $requestedNumber
-                : $this->buildUniqueInvoiceNumber();
+            $requestedNumber = trim((string) ($validated['invoice_number'] ?? ''));
+            $invoice = null;
+            $attempt = 0;
 
-            $invoice = Invoice::create([
-                'invoice_number' => $invoiceNumber,
-                'customer_name' => $validated['customer_name'],
-                'organization' => $validated['organization'],
-                'bill_to' => $validated['bill_to'],
-                'ship_to' => $validated['ship_to'],
-                'invoice_date' => $validated['invoice_date'],
-                'due_date' => $validated['due_date'],
-                'po_number' => $validated['po_number'] ?? null,
-                'subtotal' => $subtotal,
-                'tax' => $tax,
-                'total' => $total,
-                'pdf_path' => null,
-                'status' => Invoice::STATUS_PENDING,
-                'amount_paid' => 0,
-                'balance_remaining' => $total,
-            ]);
+            while ($attempt < 6) {
+                $attempt++;
+
+                $invoiceNumber = $attempt === 1 && $requestedNumber !== ''
+                    ? $requestedNumber
+                    : $this->buildUniqueInvoiceNumber();
+
+                try {
+                    $invoice = Invoice::create([
+                        'invoice_number' => $invoiceNumber,
+                        'customer_name' => $validated['customer_name'],
+                        'organization' => $validated['organization'],
+                        'bill_to' => $validated['bill_to'],
+                        'ship_to' => $validated['ship_to'],
+                        'invoice_date' => $validated['invoice_date'],
+                        'due_date' => $validated['due_date'],
+                        'po_number' => $validated['po_number'] ?? null,
+                        'subtotal' => $subtotal,
+                        'tax' => $tax,
+                        'total' => $total,
+                        'pdf_path' => null,
+                        'status' => Invoice::STATUS_PENDING,
+                        'amount_paid' => 0,
+                        'balance_remaining' => $total,
+                    ]);
+                    break;
+                } catch (QueryException $exception) {
+                    if (! $this->isInvoiceNumberUniqueViolation($exception) || $attempt >= 6) {
+                        throw $exception;
+                    }
+                }
+            }
+
+            if (! $invoice) {
+                throw ValidationException::withMessages([
+                    'invoice_number' => ['Unable to reserve a unique invoice number. Please retry.'],
+                ]);
+            }
 
             $invoice->items()->createMany($computedItems);
+
+            $invoiceForPdf = $invoice->fresh('items');
+            $pdfOutput = $this->renderInvoicePdfOutput($invoiceForPdf);
 
             $filename = 'invoice-'.$invoice->invoice_number.'-'.time().'.pdf';
             $relativePath = 'invoices/'.$filename;
 
-            $companyData = $this->buildCompanyData();
-
-            $pdf = Pdf::loadView('pdf.invoice', [
-                'invoice' => $invoice->fresh('items'),
-                'company' => $companyData,
-            ]);
-
-            $paper = $this->resolveInvoicePaper($invoice->fresh('items'));
-            if (is_array($paper['size'])) {
-                $pdf->setPaper($paper['size']);
-            } else {
-                $pdf->setPaper($paper['size'], $paper['orientation']);
+            try {
+                Storage::disk('public')->put($relativePath, $pdfOutput);
+                $invoice->update(['pdf_path' => 'storage/'.$relativePath]);
+            } catch (Throwable $exception) {
+                report($exception);
+                $invoice->update(['pdf_path' => null]);
             }
-
-            Storage::disk('public')->put($relativePath, $pdf->output());
-
-            $invoice->update(['pdf_path' => 'storage/'.$relativePath]);
 
             return $invoice->fresh('items');
         });
@@ -159,44 +174,41 @@ class InvoiceController extends Controller
             collect($computed['items'])->map(fn (array $item): InvoiceItem => new InvoiceItem($item))
         );
 
-        $pdf = Pdf::loadView('pdf.invoice', [
-            'invoice' => $previewInvoice,
-            'company' => $this->buildCompanyData(),
-        ]);
-
-        $paper = $this->resolveInvoicePaper($previewInvoice);
-        if (is_array($paper['size'])) {
-            $pdf->setPaper($paper['size']);
-        } else {
-            $pdf->setPaper($paper['size'], $paper['orientation']);
-        }
-
         $filename = 'invoice-preview-'.$invoiceNumber.'.pdf';
+        $pdfOutput = $this->renderInvoicePdfOutput($previewInvoice);
 
-        return response($pdf->output(), 200, [
+        return response($pdfOutput, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="'.$filename.'"',
             'Cache-Control' => 'private, max-age=0, must-revalidate',
         ]);
     }
 
-    public function pdf(Invoice $invoice): BinaryFileResponse|JsonResponse
+    public function pdf(Invoice $invoice): BinaryFileResponse|Response
     {
-        if (! $invoice->pdf_path) {
-            return response()->json(['message' => 'Invoice PDF is not available.'], 404);
+        if ($invoice->pdf_path) {
+            $relativePath = str_starts_with($invoice->pdf_path, 'storage/')
+                ? substr($invoice->pdf_path, strlen('storage/'))
+                : ltrim($invoice->pdf_path, '/');
+
+            if (Storage::disk('public')->exists($relativePath)) {
+                $filename = 'invoice-'.$invoice->invoice_number.'.pdf';
+
+                return response()->file(Storage::disk('public')->path($relativePath), [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="'.$filename.'"',
+                    'Cache-Control' => 'private, max-age=0, must-revalidate',
+                ]);
+            }
         }
 
-        $relativePath = str_starts_with($invoice->pdf_path, 'storage/')
-            ? substr($invoice->pdf_path, strlen('storage/'))
-            : ltrim($invoice->pdf_path, '/');
-
-        if (! Storage::disk('public')->exists($relativePath)) {
-            return response()->json(['message' => 'Invoice PDF file was not found on the server.'], 404);
-        }
-
+        // Fallback for deployments where local files are not persistent:
+        // regenerate the PDF directly from invoice data.
+        $invoiceModel = $invoice->loadMissing('items');
+        $pdfOutput = $this->renderInvoicePdfOutput($invoiceModel);
         $filename = 'invoice-'.$invoice->invoice_number.'.pdf';
 
-        return response()->file(Storage::disk('public')->path($relativePath), [
+        return response($pdfOutput, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="'.$filename.'"',
             'Cache-Control' => 'private, max-age=0, must-revalidate',
@@ -355,9 +367,14 @@ class InvoiceController extends Controller
         $baseHeight = 1191;
 
         // Estimate vertical demand from item count + description density.
-        $estimatedDescriptionLines = $items->sum(
-            fn (InvoiceItem $item): int => max((int) ceil(mb_strlen((string) $item->description) / 85), 1)
-        );
+        $estimatedDescriptionLines = $items->sum(function (InvoiceItem $item): int {
+            $description = (string) $item->description;
+            $length = function_exists('mb_strlen')
+                ? mb_strlen($description)
+                : strlen($description);
+
+            return max((int) ceil($length / 85), 1);
+        });
 
         $estimatedRows = (int) $itemCount + (int) $estimatedDescriptionLines;
         $extraHeight = max(0, $estimatedRows - 14) * 24;
@@ -376,5 +393,43 @@ class InvoiceController extends Controller
         } while (Invoice::query()->where('invoice_number', $candidate)->exists());
 
         return $candidate;
+    }
+
+    private function isInvoiceNumberUniqueViolation(QueryException $exception): bool
+    {
+        $sqlState = $exception->errorInfo[0] ?? null;
+        $driverCode = $exception->errorInfo[1] ?? null;
+        $message = strtolower($exception->getMessage());
+
+        if (in_array((string) $sqlState, ['23000', '23505'], true)) {
+            return str_contains($message, 'invoice_number');
+        }
+
+        if ((int) $driverCode === 19) {
+            return str_contains($message, 'invoice_number');
+        }
+
+        return false;
+    }
+
+    private function renderInvoicePdfOutput(Invoice $invoice): string
+    {
+        $invoiceForPdf = $invoice->relationLoaded('items')
+            ? $invoice
+            : $invoice->load('items');
+
+        $pdf = Pdf::loadView('pdf.invoice', [
+            'invoice' => $invoiceForPdf,
+            'company' => $this->buildCompanyData(),
+        ]);
+
+        $paper = $this->resolveInvoicePaper($invoiceForPdf);
+        if (is_array($paper['size'])) {
+            $pdf->setPaper($paper['size']);
+        } else {
+            $pdf->setPaper($paper['size'], $paper['orientation']);
+        }
+
+        return $pdf->output();
     }
 }

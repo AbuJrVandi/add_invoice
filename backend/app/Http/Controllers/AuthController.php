@@ -23,6 +23,12 @@ class AuthController extends Controller
             ], 401);
         }
 
+        if (($user->role ?? 'admin') === 'admin' && empty($user->managed_by_owner_id)) {
+            return response()->json([
+                'message' => 'This admin account is not active. Owner must create your credentials.',
+            ], 403);
+        }
+
         if (! Hash::check($validated['password'], $user->password)) {
             if (($user->role ?? 'admin') === 'admin' && (bool) $user->owner_force_password_notice) {
                 return response()->json([

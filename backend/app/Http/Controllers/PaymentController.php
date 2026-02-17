@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Sale;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PaymentController extends Controller
 {
@@ -125,15 +127,34 @@ class PaymentController extends Controller
             $newBalanceRemaining = round($currentBalance - $amountPaying, 2);
 
             // Create payment record
-            $payment = Payment::create([
-                'invoice_id'     => $invoice->id,
-                'receipt_number' => Payment::generateReceiptNumber(),
-                'amount_paid'    => $amountPaying,
-                'payment_method' => $validated['payment_method'],
-                'paid_at'        => now(),
-                'created_by'     => $request->user()?->id,
-                'notes'          => $validated['notes'] ?? null,
-            ]);
+            $payment = null;
+            $attempt = 0;
+
+            while ($attempt < 6) {
+                $attempt++;
+                try {
+                    $payment = Payment::create([
+                        'invoice_id'     => $invoice->id,
+                        'receipt_number' => Payment::generateReceiptNumber(),
+                        'amount_paid'    => $amountPaying,
+                        'payment_method' => $validated['payment_method'],
+                        'paid_at'        => now(),
+                        'created_by'     => $request->user()?->id,
+                        'notes'          => $validated['notes'] ?? null,
+                    ]);
+                    break;
+                } catch (QueryException $exception) {
+                    if (! $this->isReceiptNumberUniqueViolation($exception) || $attempt >= 6) {
+                        throw $exception;
+                    }
+                }
+            }
+
+            if (! $payment) {
+                throw ValidationException::withMessages([
+                    'receipt_number' => ['Unable to reserve a unique receipt number. Please retry.'],
+                ]);
+            }
 
             // Determine new status
             if ($newBalanceRemaining <= 0) {
@@ -234,5 +255,22 @@ class PaymentController extends Controller
         }
 
         return null;
+    }
+
+    private function isReceiptNumberUniqueViolation(QueryException $exception): bool
+    {
+        $sqlState = $exception->errorInfo[0] ?? null;
+        $driverCode = $exception->errorInfo[1] ?? null;
+        $message = strtolower($exception->getMessage());
+
+        if (in_array((string) $sqlState, ['23000', '23505'], true)) {
+            return str_contains($message, 'receipt_number');
+        }
+
+        if ((int) $driverCode === 19) {
+            return str_contains($message, 'receipt_number');
+        }
+
+        return false;
     }
 }
