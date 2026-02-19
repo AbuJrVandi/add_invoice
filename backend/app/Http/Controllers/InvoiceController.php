@@ -7,9 +7,11 @@ use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\InvoicePdfSetting;
+use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -31,6 +33,7 @@ class InvoiceController extends Controller
         $validated = $request->validated();
 
         $query = Invoice::query()->with('items')->latest('invoice_date');
+        $this->scopeInvoicesForUser($query, $request->user());
 
         if (! empty($validated['invoice_number'])) {
             $invoiceNumber = trim($validated['invoice_number']);
@@ -60,7 +63,7 @@ class InvoiceController extends Controller
     {
         $validated = $request->validated();
 
-        $invoice = DB::transaction(function () use ($validated) {
+        $invoice = DB::transaction(function () use ($validated, $request) {
             $computed = $this->computeInvoiceTotals($validated);
             $computedItems = $computed['items'];
             $subtotal = $computed['subtotal'];
@@ -92,6 +95,7 @@ class InvoiceController extends Controller
                         'tax' => $tax,
                         'total' => $total,
                         'pdf_path' => null,
+                        'created_by_user_id' => $request->user()?->id,
                         'status' => Invoice::STATUS_PENDING,
                         'amount_paid' => 0,
                         'balance_remaining' => $total,
@@ -184,8 +188,12 @@ class InvoiceController extends Controller
         ]);
     }
 
-    public function pdf(Invoice $invoice): BinaryFileResponse|Response
+    public function pdf(Request $request, Invoice $invoice): BinaryFileResponse|Response
     {
+        if (! $this->userCanAccessInvoice($request->user(), $invoice)) {
+            return response()->json(['message' => 'You can only access your own invoices.'], 403);
+        }
+
         if ($invoice->pdf_path) {
             $relativePath = str_starts_with($invoice->pdf_path, 'storage/')
                 ? substr($invoice->pdf_path, strlen('storage/'))
@@ -215,13 +223,21 @@ class InvoiceController extends Controller
         ]);
     }
 
-    public function show(Invoice $invoice): JsonResponse
+    public function show(Request $request, Invoice $invoice): JsonResponse
     {
+        if (! $this->userCanAccessInvoice($request->user(), $invoice)) {
+            return response()->json(['message' => 'You can only access your own invoices.'], 403);
+        }
+
         return response()->json($invoice->load('items'));
     }
 
-    public function destroy(Invoice $invoice): JsonResponse
+    public function destroy(Request $request, Invoice $invoice): JsonResponse
     {
+        if (! $this->userCanAccessInvoice($request->user(), $invoice)) {
+            return response()->json(['message' => 'You can only manage your own invoices.'], 403);
+        }
+
         if ($invoice->payments()->exists() || $invoice->hasSale() || $invoice->isFullyPaid()) {
             return response()->json([
                 'message' => 'This invoice has financial history and cannot be deleted.',
@@ -344,9 +360,8 @@ class InvoiceController extends Controller
     }
 
     /**
-     * Keep invoices on a single page by dynamically expanding paper size.
-     * - <= 3 items: standard A4 portrait
-     * - > 3 items: start from A3 height and grow further when needed
+     * Keep invoices on one page by expanding paper size as needed.
+     * Uses standard ISO sizes first (A4->A0), then a custom oversized page.
      */
     private function resolveInvoicePaper(Invoice $invoice): array
     {
@@ -354,34 +369,47 @@ class InvoiceController extends Controller
             ? $invoice->items
             : $invoice->items()->get();
 
-        $itemCount = $items->count();
-        if ($itemCount <= 3) {
-            return [
-                'size' => 'a4',
-                'orientation' => 'portrait',
-            ];
-        }
-
-        // A3 portrait base in points: width 842, height 1191
-        $baseWidth = 842;
-        $baseHeight = 1191;
-
-        // Estimate vertical demand from item count + description density.
-        $estimatedDescriptionLines = $items->sum(function (InvoiceItem $item): int {
+        $descriptionLines = $items->sum(function (InvoiceItem $item): int {
             $description = (string) $item->description;
             $length = function_exists('mb_strlen')
                 ? mb_strlen($description)
                 : strlen($description);
 
-            return max((int) ceil($length / 85), 1);
+            return max((int) ceil($length / 62), 1);
         });
 
-        $estimatedRows = (int) $itemCount + (int) $estimatedDescriptionLines;
-        $extraHeight = max(0, $estimatedRows - 14) * 24;
-        $targetHeight = $baseHeight + $extraHeight;
+        $itemCount = $items->count();
 
+        // Conservative height estimate to avoid accidental page breaks.
+        $fixedContentHeight = 760; // header, meta, totals, payment section, footer
+        $rowBaseHeight = 26;
+        $extraDescriptionLineHeight = 14;
+        $safetyBuffer = 140;
+        $estimatedHeight = $fixedContentHeight
+            + ($itemCount * $rowBaseHeight)
+            + ($descriptionLines * $extraDescriptionLineHeight)
+            + $safetyBuffer;
+
+        $portraitSizes = [
+            ['name' => 'a4', 'width' => 595, 'height' => 842],
+            ['name' => 'a3', 'width' => 842, 'height' => 1191],
+            ['name' => 'a2', 'width' => 1191, 'height' => 1684],
+            ['name' => 'a1', 'width' => 1684, 'height' => 2384],
+            ['name' => 'a0', 'width' => 2384, 'height' => 3370],
+        ];
+
+        foreach ($portraitSizes as $paper) {
+            if ($estimatedHeight <= $paper['height']) {
+                return [
+                    'size' => $paper['name'],
+                    'orientation' => 'portrait',
+                ];
+            }
+        }
+
+        $largest = end($portraitSizes);
         return [
-            'size' => [0, 0, $baseWidth, $targetHeight],
+            'size' => [0, 0, $largest['width'], (int) ceil($estimatedHeight)],
             'orientation' => null,
         ];
     }
@@ -393,6 +421,26 @@ class InvoiceController extends Controller
         } while (Invoice::query()->where('invoice_number', $candidate)->exists());
 
         return $candidate;
+    }
+
+    private function scopeInvoicesForUser($query, ?User $user): void
+    {
+        if (($user?->role ?? 'admin') === 'admin') {
+            $query->where('created_by_user_id', $user?->id);
+        }
+    }
+
+    private function userCanAccessInvoice(?User $user, Invoice $invoice): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        if (($user->role ?? 'admin') === 'owner') {
+            return true;
+        }
+
+        return (int) ($invoice->created_by_user_id ?? 0) === (int) $user->id;
     }
 
     private function isInvoiceNumberUniqueViolation(QueryException $exception): bool

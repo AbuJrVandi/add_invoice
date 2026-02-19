@@ -47,6 +47,8 @@ function Login() {
               <li>Track payments with live status updates</li>
               <li>Generate professional PDF documents</li>
               <li>Keep financial records centralized</li>
+              <li>Receipt generator</li>
+
             </ul>
           </div>
         </section>
@@ -95,10 +97,6 @@ function Login() {
                 {showPassword ? 'Hide' : 'Show'}
               </button>
             </div>
-          </div>
-
-          <div className="auth-options">
-            <a href="#" className="auth-forgot" onClick={(e) => e.preventDefault()}>Forgot password?</a>
           </div>
 
           {error ? <p className="error">{error}</p> : null}

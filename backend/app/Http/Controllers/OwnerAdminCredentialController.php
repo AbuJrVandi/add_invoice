@@ -41,12 +41,40 @@ class OwnerAdminCredentialController extends Controller
             'owner_password_ciphertext' => Crypt::encryptString($validated['password']),
             'owner_password_changed_at' => now(),
             'owner_force_password_notice' => false,
+            'is_active' => true,
         ]);
 
         return response()->json([
             'message' => 'Admin credentials created successfully.',
             'data' => $this->transformAdminCredentials($admin),
         ], 201);
+    }
+
+    public function update(Request $request, User $user): JsonResponse
+    {
+        if ($user->role !== 'admin') {
+            return response()->json([
+                'message' => 'Only admin accounts can be managed here.',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+        ]);
+
+        $owner = $request->user();
+
+        $user->forceFill([
+            'name' => trim($validated['name']),
+            'email' => strtolower(trim($validated['email'])),
+            'managed_by_owner_id' => $owner?->id ?? $user->managed_by_owner_id,
+        ])->save();
+
+        return response()->json([
+            'message' => 'Admin account updated successfully.',
+            'data' => $this->transformAdminCredentials($user->fresh()),
+        ]);
     }
 
     public function updatePassword(Request $request, User $user): JsonResponse
@@ -79,6 +107,38 @@ class OwnerAdminCredentialController extends Controller
         ]);
     }
 
+    public function updateStatus(Request $request, User $user): JsonResponse
+    {
+        if ($user->role !== 'admin') {
+            return response()->json([
+                'message' => 'Only admin accounts can be managed here.',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'is_active' => ['required', 'boolean'],
+        ]);
+
+        $owner = $request->user();
+        $isActive = (bool) $validated['is_active'];
+
+        $user->forceFill([
+            'is_active' => $isActive,
+            'managed_by_owner_id' => $owner?->id ?? $user->managed_by_owner_id,
+        ])->save();
+
+        if (! $isActive) {
+            $user->tokens()->delete();
+        }
+
+        return response()->json([
+            'message' => $isActive
+                ? 'Admin account activated successfully.'
+                : 'Admin account deactivated successfully.',
+            'data' => $this->transformAdminCredentials($user->fresh()),
+        ]);
+    }
+
     private function transformAdminCredentials(User $admin): array
     {
         $password = null;
@@ -97,6 +157,7 @@ class OwnerAdminCredentialController extends Controller
             'email' => $admin->email,
             'role' => $admin->role,
             'password' => $password,
+            'is_active' => (bool) ($admin->is_active ?? true),
             'managed_by_owner_id' => $admin->managed_by_owner_id,
             'owner_password_changed_at' => $admin->owner_password_changed_at?->toISOString(),
             'created_at' => $admin->created_at?->toISOString(),

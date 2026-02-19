@@ -20,7 +20,7 @@ class Payment extends Model
         'notes',
     ];
 
-    protected $appends = ['receipt_url'];
+    protected $appends = ['receipt_url', 'receipt_pdf_url'];
 
     protected function casts(): array
     {
@@ -33,6 +33,11 @@ class Payment extends Model
     public function getReceiptUrlAttribute(): string
     {
         return \Illuminate\Support\Facades\URL::signedRoute('payments.receipt', ['payment' => $this->id]);
+    }
+
+    public function getReceiptPdfUrlAttribute(): string
+    {
+        return \Illuminate\Support\Facades\URL::signedRoute('payments.receipt.pdf', ['payment' => $this->id]);
     }
 
     public function invoice(): BelongsTo

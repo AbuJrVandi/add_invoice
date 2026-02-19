@@ -116,6 +116,74 @@ export default function Payments() {
     };
   };
 
+  const getFilenameFromDisposition = (contentDisposition, fallback) => {
+    if (!contentDisposition) {
+      return fallback;
+    }
+
+    const utfMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utfMatch?.[1]) {
+      return decodeURIComponent(utfMatch[1]).trim();
+    }
+
+    const asciiMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+    if (asciiMatch?.[1]) {
+      return asciiMatch[1].trim();
+    }
+
+    return fallback;
+  };
+
+  const triggerBlobDownload = (blob, filename) => {
+    const objectUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(objectUrl);
+  };
+
+  const downloadReceipt = async (paymentOrId) => {
+    let targetPayment;
+    if (typeof paymentOrId === 'object') {
+      targetPayment = paymentOrId;
+    } else {
+      targetPayment = payments.find((entry) => entry.id === paymentOrId);
+    }
+
+    if (!targetPayment?.id) {
+      console.error('Payment not found for receipt download');
+      return;
+    }
+
+    const fallbackName = `receipt-${targetPayment.receipt_number || targetPayment.id}.pdf`;
+
+    try {
+      const response = await api.get(`/payments/${targetPayment.id}/receipt/download`, {
+        responseType: 'blob',
+      });
+      const disposition = response?.headers?.['content-disposition'] || '';
+      const filename = getFilenameFromDisposition(disposition, fallbackName);
+      triggerBlobDownload(response.data, filename);
+      return;
+    } catch (error) {
+      if (targetPayment.receipt_pdf_url) {
+        const fallbackLink = document.createElement('a');
+        fallbackLink.href = targetPayment.receipt_pdf_url;
+        fallbackLink.target = '_blank';
+        fallbackLink.rel = 'noreferrer';
+        fallbackLink.download = fallbackName;
+        document.body.appendChild(fallbackLink);
+        fallbackLink.click();
+        fallbackLink.remove();
+        return;
+      }
+      console.error('Unable to download receipt', error);
+    }
+  };
+
   const rows = useMemo(() => (activeTab === 'payments' ? payments : invoices), [activeTab, payments, invoices]);
 
   return (
@@ -183,6 +251,7 @@ export default function Payments() {
                 <div className="payments-mobile-actions">
                   <Link className="button button-outline" to={`/invoices/${payment.invoice_id}/view`}>Invoice</Link>
                   <Link className="button button-outline" to={`/payments/${payment.id}/receipt`}>Receipt</Link>
+                  <button type="button" className="button button-outline" onClick={() => downloadReceipt(payment)}>Download</button>
                   <button type="button" className="button" onClick={() => printReceipt(payment)}>Print</button>
                 </div>
               </article>
@@ -260,6 +329,9 @@ export default function Payments() {
                         <Link className="btn-icon" to={`/payments/${payment.id}/receipt`} title="View Receipt">
                           🧾
                         </Link>
+                        <button className="btn-icon" onClick={() => downloadReceipt(payment)} title="Download Receipt PDF" type="button">
+                          PDF
+                        </button>
                         <button className="btn-icon" onClick={() => printReceipt(payment)} title="Reprint Receipt" type="button">
                           🖨️
                         </button>

@@ -204,9 +204,11 @@ class OwnerAnalyticsController extends Controller
             ->groupBy('payment_method')
             ->pluck('total', 'payment_method');
 
+        $activityLimit = 250;
+
         $recentInvoices = Invoice::query()
             ->latest('created_at')
-            ->take(8)
+            ->take($activityLimit)
             ->get([
                 'id',
                 'invoice_number',
@@ -224,7 +226,7 @@ class OwnerAnalyticsController extends Controller
         $recentReceipts = Payment::query()
             ->with('invoice:id,invoice_number,customer_name,organization,status,total,balance_remaining')
             ->latest('paid_at')
-            ->take(8)
+            ->take($activityLimit)
             ->get([
                 'id',
                 'invoice_id',

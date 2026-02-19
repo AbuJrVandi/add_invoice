@@ -21,15 +21,16 @@ class AuthController extends Controller
         $ownerPassword = (string) env('OWNER_PASSWORD', 'password');
         $emailMatchesOwner = strcasecmp($validated['email'], $ownerEmail) === 0;
 
-        // Self-heal owner login in production when seed/shell access is unavailable.
+        // Self-heal owner login: only create if owner doesn't exist yet.
         if ($emailMatchesOwner && hash_equals($ownerPassword, $validated['password'])) {
-            $user = User::query()->updateOrCreate([
-                'email' => $ownerEmail,
-            ], [
-                'name' => $ownerName,
-                'role' => 'owner',
-                'password' => Hash::make($ownerPassword),
-            ]);
+            $user = User::query()->firstOrCreate(
+                ['email' => $ownerEmail],
+                [
+                    'name' => $ownerName,
+                    'role' => 'owner',
+                    'password' => Hash::make($ownerPassword),
+                ]
+            );
         } else {
             $user = User::query()->where('email', $validated['email'])->first();
         }
@@ -43,6 +44,12 @@ class AuthController extends Controller
         if (($user->role ?? 'admin') === 'admin' && empty($user->managed_by_owner_id)) {
             return response()->json([
                 'message' => 'This admin account is not active. Owner must create your credentials.',
+            ], 403);
+        }
+
+        if (($user->role ?? 'admin') === 'admin' && ! (bool) ($user->is_active ?? true)) {
+            return response()->json([
+                'message' => 'This account is deactivated. Contact owner to reactivate it.',
             ], 403);
         }
 
@@ -64,6 +71,8 @@ class AuthController extends Controller
             ])->save();
         }
 
+        // Keep a single active token per user to avoid unbounded token-table growth.
+        $user->tokens()->delete();
         $token = $user->createToken('admin-token')->plainTextToken;
 
         return response()->json([
@@ -74,6 +83,7 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role ?? 'admin',
+                'is_active' => (bool) ($user->is_active ?? true),
             ],
         ]);
     }

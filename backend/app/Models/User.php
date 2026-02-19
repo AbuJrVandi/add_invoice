@@ -27,6 +27,7 @@ class User extends Authenticatable
         'owner_password_ciphertext',
         'owner_password_changed_at',
         'owner_force_password_notice',
+        'is_active',
     ];
 
     public function isOwner(): bool
@@ -56,6 +57,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'owner_password_changed_at' => 'datetime',
             'owner_force_password_notice' => 'boolean',
+            'is_active' => 'boolean',
         ];
     }
 }

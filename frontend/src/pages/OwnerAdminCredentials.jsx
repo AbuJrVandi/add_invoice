@@ -50,6 +50,8 @@ export default function OwnerAdminCredentials() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [updatingUserId, setUpdatingUserId] = useState(null);
+  const [editingUserId, setEditingUserId] = useState(null);
+  const [togglingUserId, setTogglingUserId] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -118,6 +120,66 @@ export default function OwnerAdminCredentials() {
       setError(extractErrorMessage(requestError, 'Unable to change password.'));
     } finally {
       setUpdatingUserId(null);
+    }
+  };
+
+  const editAdmin = async (admin) => {
+    const nextName = window.prompt('Edit full name', admin.name || '');
+    if (nextName === null) {
+      return;
+    }
+
+    const nextEmail = window.prompt('Edit email address', admin.email || '');
+    if (nextEmail === null) {
+      return;
+    }
+
+    setEditingUserId(admin.id);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await api.put(`/owner/admin-credentials/${admin.id}`, {
+        name: nextName.trim(),
+        email: nextEmail.trim(),
+      });
+
+      setSuccess(response.data?.message || 'Admin account updated.');
+      await fetchAdmins();
+    } catch (requestError) {
+      setError(extractErrorMessage(requestError, 'Unable to edit admin account.'));
+    } finally {
+      setEditingUserId(null);
+    }
+  };
+
+  const toggleAdminStatus = async (admin) => {
+    const nextStatus = !Boolean(admin.is_active);
+    const confirmed = window.confirm(
+      nextStatus
+        ? `Activate ${admin.name}'s account?`
+        : `Deactivate ${admin.name}'s account? They will not be able to login.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setTogglingUserId(admin.id);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await api.patch(`/owner/admin-credentials/${admin.id}/status`, {
+        is_active: nextStatus,
+      });
+
+      setSuccess(response.data?.message || 'Admin account status updated.');
+      await fetchAdmins();
+    } catch (requestError) {
+      setError(extractErrorMessage(requestError, 'Unable to update admin status.'));
+    } finally {
+      setTogglingUserId(null);
     }
   };
 
@@ -210,17 +272,45 @@ export default function OwnerAdminCredentials() {
                     <strong className="owner-password-value">{admin.password || 'Not available'}</strong>
                   </div>
                   <div className="owner-credentials-row">
+                    <span>Status</span>
+                    <strong className={admin.is_active ? 'owner-status-pill active' : 'owner-status-pill inactive'}>
+                      {admin.is_active ? 'Active' : 'Deactivated'}
+                    </strong>
+                  </div>
+                  <div className="owner-credentials-row">
                     <span>Changed</span>
                     <strong>{formatDateTime(admin.owner_password_changed_at)}</strong>
                   </div>
-                  <button
-                    type="button"
-                    className="button"
-                    onClick={() => changePassword(admin)}
-                    disabled={updatingUserId === admin.id}
-                  >
-                    {updatingUserId === admin.id ? 'Updating...' : 'Change Password'}
-                  </button>
+                  <div className="owner-credentials-actions">
+                    <button
+                      type="button"
+                      className="button btn-sm button-outline"
+                      onClick={() => editAdmin(admin)}
+                      disabled={editingUserId === admin.id}
+                    >
+                      {editingUserId === admin.id ? 'Saving...' : 'Edit'}
+                    </button>
+                    <button
+                      type="button"
+                      className={`button btn-sm ${admin.is_active ? 'button-danger' : 'button-outline'}`}
+                      onClick={() => toggleAdminStatus(admin)}
+                      disabled={togglingUserId === admin.id}
+                    >
+                      {togglingUserId === admin.id
+                        ? 'Updating...'
+                        : admin.is_active
+                          ? 'Deactivate'
+                          : 'Activate'}
+                    </button>
+                    <button
+                      type="button"
+                      className="button btn-sm"
+                      onClick={() => changePassword(admin)}
+                      disabled={updatingUserId === admin.id}
+                    >
+                      {updatingUserId === admin.id ? 'Updating...' : 'Change Password'}
+                    </button>
+                  </div>
                 </article>
               ))
             )}
@@ -232,15 +322,16 @@ export default function OwnerAdminCredentials() {
                 <tr>
                   <th>Name</th>
                   <th>Email</th>
+                  <th>Status</th>
                   <th>Password</th>
                   <th>Changed By Owner</th>
-                  <th>Action</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {admins.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="empty-state">No admin credentials created yet.</td>
+                    <td colSpan="6" className="empty-state">No admin credentials created yet.</td>
                   </tr>
                 ) : (
                   admins.map((admin) => (
@@ -248,10 +339,37 @@ export default function OwnerAdminCredentials() {
                       <td>{admin.name}</td>
                       <td>{admin.email}</td>
                       <td>
+                        <span className={admin.is_active ? 'owner-status-pill active' : 'owner-status-pill inactive'}>
+                          {admin.is_active ? 'Active' : 'Deactivated'}
+                        </span>
+                      </td>
+                      <td>
                         <code className="owner-password-value">{admin.password || 'Not available'}</code>
                       </td>
                       <td>{formatDateTime(admin.owner_password_changed_at)}</td>
                       <td>
+                        <button
+                          type="button"
+                          className="button btn-sm button-outline"
+                          onClick={() => editAdmin(admin)}
+                          disabled={editingUserId === admin.id}
+                        >
+                          {editingUserId === admin.id ? 'Saving...' : 'Edit'}
+                        </button>
+                        {' '}
+                        <button
+                          type="button"
+                          className={`button btn-sm ${admin.is_active ? 'button-danger' : 'button-outline'}`}
+                          onClick={() => toggleAdminStatus(admin)}
+                          disabled={togglingUserId === admin.id}
+                        >
+                          {togglingUserId === admin.id
+                            ? 'Updating...'
+                            : admin.is_active
+                              ? 'Deactivate'
+                              : 'Activate'}
+                        </button>
+                        {' '}
                         <button
                           type="button"
                           className="button btn-sm"

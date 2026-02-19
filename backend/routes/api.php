@@ -35,6 +35,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function (): void {
     Route::get('/payments', [PaymentController::class, 'index']);
     Route::post('/payments', [PaymentController::class, 'store']);
     Route::get('/payments/{payment}', [PaymentController::class, 'show']);
+    Route::get('/payments/{payment}/receipt/download', [PaymentController::class, 'receiptPdfDownload']);
 });
 
 Route::middleware(['auth:sanctum', 'role:admin,owner'])->group(function (): void {
@@ -50,9 +51,15 @@ Route::prefix('owner')
         Route::get('/approvals', [OwnerApprovalController::class, 'index']);
         Route::get('/admin-credentials', [OwnerAdminCredentialController::class, 'index']);
         Route::post('/admin-credentials', [OwnerAdminCredentialController::class, 'store']);
+        Route::put('/admin-credentials/{user}', [OwnerAdminCredentialController::class, 'update']);
         Route::put('/admin-credentials/{user}/password', [OwnerAdminCredentialController::class, 'updatePassword']);
+        Route::patch('/admin-credentials/{user}/status', [OwnerAdminCredentialController::class, 'updateStatus']);
     });
 
 Route::get('/payments/{payment}/receipt', [PaymentController::class, 'receipt'])
     ->name('payments.receipt')
+    ->middleware('signed');
+
+Route::get('/payments/{payment}/receipt/pdf', [PaymentController::class, 'receiptPdf'])
+    ->name('payments.receipt.pdf')
     ->middleware('signed');

@@ -24,6 +24,8 @@ function Dashboard() {
       try {
         const response = await api.get('/dashboard');
         setData(response.data);
+      } catch (err) {
+        console.error('Failed to load dashboard:', err);
       } finally {
         setLoading(false);
       }

@@ -275,41 +275,47 @@ export default function OwnerDashboard() {
     return Math.max(maxInvoices, maxReceipts, 1);
   }, [analytics.weekly_activity.invoices_created, analytics.weekly_activity.receipts_issued]);
 
-  const activityRows = useMemo(() => {
-    const invoiceRows = (analytics.recent?.invoices || []).map((invoice) => ({
+  const scaledVolumeHeight = (value) => {
+    const numericValue = Number(value || 0);
+    if (numericValue <= 0) {
+      return 0;
+    }
+
+    const ratio = Math.sqrt(numericValue / weeklyMaxVolume) * 82;
+    return Math.max(Math.min(ratio, 82), 8);
+  };
+
+  const invoiceActivityRows = useMemo(
+    () => (analytics.recent?.invoices || []).map((invoice) => ({
       id: `inv-${invoice.id}`,
-      type: 'invoice',
       reference: invoice.invoice_number,
-      counterpart: invoice.customer_name,
+      customer: invoice.customer_name,
+      organization: invoice.organization || '-',
       status: invoice.status,
       amount: Number(invoice.total || 0),
       timestamp: invoice.created_at,
-      details: invoice.organization || 'Invoice issued',
       actionLink: `/invoices/${invoice.id}/view`,
       actionLabel: 'Open Invoice',
-      external: false,
-    }));
+    })),
+    [analytics.recent?.invoices]
+  );
 
-    const receiptRows = (analytics.recent?.receipts || []).map((receipt) => ({
+  const receiptActivityRows = useMemo(
+    () => (analytics.recent?.receipts || []).map((receipt) => ({
       id: `rcp-${receipt.id}`,
-      type: 'receipt',
       reference: receipt.receipt_number,
-      counterpart: receipt.invoice?.customer_name || 'Unknown Customer',
-      status: receipt.payment_method,
+      invoiceRef: receipt.invoice?.invoice_number || '-',
+      customer: receipt.invoice?.customer_name || 'Unknown Customer',
+      method: PAYMENT_METHOD_LABELS[receipt.payment_method] || receipt.payment_method || '-',
       amount: Number(receipt.amount_paid || 0),
       timestamp: receipt.paid_at,
-      details: receipt.invoice?.invoice_number
-        ? `For ${receipt.invoice.invoice_number}`
-        : 'Payment recorded',
       actionLink: receipt.receipt_url || '#',
+      downloadLink: receipt.receipt_pdf_url || '',
       actionLabel: 'Open Receipt',
       external: true,
-    }));
-
-    return [...invoiceRows, ...receiptRows]
-      .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())
-      .slice(0, 10);
-  }, [analytics.recent]);
+    })),
+    [analytics.recent?.receipts]
+  );
 
   if (loading) {
     return <div className="loading-state">Loading owner analytics...</div>;
@@ -367,15 +373,15 @@ export default function OwnerDashboard() {
           <div className="owner-ops-inline-stats">
             <div>
               <span>Pending</span>
-              <strong>{analytics.overview.pending_invoices}</strong>
+              <strong>{formatCompact(analytics.overview.pending_invoices)}</strong>
             </div>
             <div>
               <span>Due</span>
-              <strong>{analytics.overview.due_invoices}</strong>
+              <strong>{formatCompact(analytics.overview.due_invoices)}</strong>
             </div>
             <div>
               <span>Completed</span>
-              <strong>{analytics.overview.completed_invoices}</strong>
+              <strong>{formatCompact(analytics.overview.completed_invoices)}</strong>
             </div>
           </div>
         </article>
@@ -447,21 +453,35 @@ export default function OwnerDashboard() {
             <span className="owner-ops-card-tag">Last 7 days</span>
           </div>
 
-          <div className="owner-ops-volume-bars">
-            {(analytics.weekly_activity.labels || []).map((label, index) => {
-              const invoiceValue = Number(analytics.weekly_activity.invoices_created?.[index] || 0);
-              const receiptValue = Number(analytics.weekly_activity.receipts_issued?.[index] || 0);
+          <div className="owner-ops-volume-scroll">
+            <div className="owner-ops-volume-bars">
+              {(analytics.weekly_activity.labels || []).map((label, index) => {
+                const invoiceValue = Number(analytics.weekly_activity.invoices_created?.[index] || 0);
+                const receiptValue = Number(analytics.weekly_activity.receipts_issued?.[index] || 0);
 
-              return (
-                <div className="owner-ops-volume-col" key={label + index}>
-                  <div className="owner-ops-volume-rails">
-                    <span className="invoice" style={{ height: `${(invoiceValue / weeklyMaxVolume) * 100}%` }}></span>
-                    <span className="receipt" style={{ height: `${(receiptValue / weeklyMaxVolume) * 100}%` }}></span>
+                return (
+                  <div className="owner-ops-volume-col" key={label + index}>
+                    <div className="owner-ops-volume-rails">
+                      <span
+                        className="invoice"
+                        style={{ height: `${scaledVolumeHeight(invoiceValue)}%` }}
+                        title={`Invoices: ${invoiceValue}`}
+                      ></span>
+                      <span
+                        className="receipt"
+                        style={{ height: `${scaledVolumeHeight(receiptValue)}%` }}
+                        title={`Receipts: ${receiptValue}`}
+                      ></span>
+                    </div>
+                    <div className="owner-ops-volume-counts">
+                      <span>{invoiceValue}</span>
+                      <span>{receiptValue}</span>
+                    </div>
+                    <small>{label}</small>
                   </div>
-                  <small>{label}</small>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
           <div className="owner-ops-volume-legend">
@@ -512,65 +532,110 @@ export default function OwnerDashboard() {
         </article>
       </section>
 
-      <section className="owner-ops-card owner-ops-activity-card">
-        <div className="owner-ops-card-head">
-          <h3>Live Owner Activity</h3>
-          <span className="owner-ops-card-tag">Invoices + Receipts</span>
-        </div>
+      <section className="owner-ops-activity-grid">
+        <article className="owner-ops-card owner-ops-activity-card">
+          <div className="owner-ops-card-head">
+            <h3>Invoice Activity</h3>
+            <span className="owner-ops-card-tag">{invoiceActivityRows.length} records</span>
+          </div>
 
-        <div className="table-wrap">
-          <table className="table owner-ops-table">
-            <thead>
-              <tr>
-                <th>Type</th>
-                <th>Reference</th>
-                <th>Customer</th>
-                <th>Status / Method</th>
-                <th>Amount</th>
-                <th>Time</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activityRows.length === 0 ? (
+          <div className="table-wrap owner-ops-activity-scroll">
+            <table className="table owner-ops-table">
+              <thead>
                 <tr>
-                  <td colSpan="7" className="empty-state">No invoices or receipts recorded yet.</td>
+                  <th>Invoice #</th>
+                  <th>Customer</th>
+                  <th>Status</th>
+                  <th>Total</th>
+                  <th>Created</th>
+                  <th>Action</th>
                 </tr>
-              ) : (
-                activityRows.map((row) => (
-                  <tr key={row.id}>
-                    <td>{row.type === 'invoice' ? 'Invoice' : 'Receipt'}</td>
-                    <td>
-                      <strong>{row.reference}</strong>
-                      <span className="owner-ops-subtext">{row.details}</span>
-                    </td>
-                    <td>{row.counterpart}</td>
-                    <td>
-                      {row.type === 'invoice' ? (
-                        <span className={invoiceStatusChipClass(row.status)}>{row.status}</span>
-                      ) : (
-                        <span className="owner-ops-chip neutral">{PAYMENT_METHOD_LABELS[row.status] || row.status}</span>
-                      )}
-                    </td>
-                    <td>{formatCurrency(row.amount)}</td>
-                    <td>{formatDateTime(row.timestamp)}</td>
-                    <td>
-                      {row.external ? (
-                        <a href={row.actionLink} target="_blank" rel="noreferrer" className="owner-ops-action-link">
-                          {row.actionLabel}
-                        </a>
-                      ) : (
+              </thead>
+              <tbody>
+                {invoiceActivityRows.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="empty-state">No invoices recorded yet.</td>
+                  </tr>
+                ) : (
+                  invoiceActivityRows.map((row) => (
+                    <tr key={row.id}>
+                      <td>
+                        <strong>{row.reference}</strong>
+                        <span className="owner-ops-subtext">{row.organization}</span>
+                      </td>
+                      <td>{row.customer}</td>
+                      <td><span className={invoiceStatusChipClass(row.status)}>{row.status}</span></td>
+                      <td>{formatCurrency(row.amount)}</td>
+                      <td>{formatDateTime(row.timestamp)}</td>
+                      <td>
                         <Link to={row.actionLink} className="owner-ops-action-link">
                           {row.actionLabel}
                         </Link>
-                      )}
-                    </td>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article className="owner-ops-card owner-ops-activity-card">
+          <div className="owner-ops-card-head">
+            <h3>Receipt Activity</h3>
+            <span className="owner-ops-card-tag">{receiptActivityRows.length} records</span>
+          </div>
+
+          <div className="table-wrap owner-ops-activity-scroll">
+            <table className="table owner-ops-table">
+              <thead>
+                <tr>
+                  <th>Receipt #</th>
+                  <th>Invoice #</th>
+                  <th>Customer</th>
+                  <th>Method</th>
+                  <th>Amount</th>
+                  <th>Paid</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {receiptActivityRows.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="empty-state">No receipts recorded yet.</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  receiptActivityRows.map((row) => (
+                    <tr key={row.id}>
+                      <td><strong>{row.reference}</strong></td>
+                      <td>{row.invoiceRef}</td>
+                      <td>{row.customer}</td>
+                      <td><span className="owner-ops-chip neutral">{row.method}</span></td>
+                      <td>{formatCurrency(row.amount)}</td>
+                      <td>{formatDateTime(row.timestamp)}</td>
+                      <td>
+                        {row.external ? (
+                          <div className="owner-ops-action-group">
+                            <a href={row.actionLink} target="_blank" rel="noreferrer" className="owner-ops-action-link">
+                              {row.actionLabel}
+                            </a>
+                            {row.downloadLink ? (
+                              <a href={row.downloadLink} target="_blank" rel="noreferrer" className="owner-ops-action-link">
+                                Download PDF
+                              </a>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <span>-</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </article>
       </section>
     </div>
   );

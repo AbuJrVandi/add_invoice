@@ -243,7 +243,10 @@ textarea { min-height: 100px; resize: vertical; }
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 16px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .sidebar-nav a .nav-label {
@@ -2084,6 +2087,9 @@ textarea { min-height: 100px; resize: vertical; }
   background: linear-gradient(130deg, #f58f61 0%, #ea5f89 48%, #d94fb4 100%);
   border-color: transparent;
   color: #ffffff;
+  display: grid;
+  align-content: start;
+  gap: 10px;
 }
 
 .owner-ops-card-gradient .owner-ops-card-head h3,
@@ -2094,17 +2100,19 @@ textarea { min-height: 100px; resize: vertical; }
 }
 
 .owner-ops-total-number {
-  margin-top: 8px;
+  margin-top: 0;
   font-family: 'Outfit', sans-serif;
-  font-size: 56px;
-  line-height: 1;
+  font-size: clamp(40px, 6vw, 56px);
+  line-height: 0.95;
   letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
 .owner-ops-sparkline {
   width: 100%;
   height: 72px;
-  margin-top: 8px;
+  margin-top: 0;
 }
 
 .owner-ops-sparkline-path {
@@ -2115,7 +2123,7 @@ textarea { min-height: 100px; resize: vertical; }
 }
 
 .owner-ops-inline-stats {
-  margin-top: 8px;
+  margin-top: 0;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
@@ -2124,6 +2132,7 @@ textarea { min-height: 100px; resize: vertical; }
 .owner-ops-inline-stats div {
   border-left: 1px dashed rgba(255, 255, 255, 0.45);
   padding-left: 8px;
+  min-width: 0;
 }
 
 .owner-ops-inline-stats div:first-child {
@@ -2140,8 +2149,9 @@ textarea { min-height: 100px; resize: vertical; }
 .owner-ops-inline-stats strong {
   display: block;
   margin-top: 3px;
-  font-size: 22px;
+  font-size: clamp(18px, 3vw, 22px);
   font-family: 'Outfit', sans-serif;
+  overflow-wrap: anywhere;
 }
 
 .owner-ops-health-grid {
@@ -2285,13 +2295,23 @@ textarea { min-height: 100px; resize: vertical; }
   gap: 12px;
 }
 
+.owner-ops-volume-card {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+
 .owner-ops-volume-bars {
-  margin-top: 8px;
-  min-height: 170px;
+  margin-top: 14px;
+  min-height: 150px;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 8px;
   align-items: end;
+}
+
+.owner-ops-volume-scroll {
+  width: 100%;
 }
 
 .owner-ops-volume-col {
@@ -2302,7 +2322,7 @@ textarea { min-height: 100px; resize: vertical; }
 
 .owner-ops-volume-rails {
   width: 100%;
-  height: 138px;
+  height: 116px;
   display: flex;
   gap: 4px;
   align-items: flex-end;
@@ -2326,6 +2346,23 @@ textarea { min-height: 100px; resize: vertical; }
 .owner-ops-volume-col small {
   font-size: 11px;
   color: #7f89a6;
+}
+
+.owner-ops-volume-counts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.owner-ops-volume-counts span {
+  min-width: 28px;
+  border-radius: 999px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #5f6c8d;
+  background: #f1f5fb;
+  padding: 2px 6px;
 }
 
 .owner-ops-volume-legend {
@@ -2409,10 +2446,27 @@ textarea { min-height: 100px; resize: vertical; }
   padding-bottom: 8px;
 }
 
+.owner-ops-activity-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.owner-ops-activity-scroll {
+  max-height: 460px;
+  overflow: auto;
+  border: 1px solid #e5eaf5;
+  border-radius: 12px;
+}
+
 .owner-ops-table th {
   font-size: 12px;
   color: #6f7a97;
   font-weight: 600;
+  position: sticky;
+  top: 0;
+  background: #f8fafd;
+  z-index: 1;
 }
 
 .owner-ops-table td {
@@ -2467,6 +2521,12 @@ textarea { min-height: 100px; resize: vertical; }
   text-decoration: underline;
 }
 
+.owner-ops-action-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .owner-ops-page .owner-trend {
   width: fit-content;
   border-radius: 999px;
@@ -2501,6 +2561,10 @@ textarea { min-height: 100px; resize: vertical; }
   }
 
   .owner-ops-middle-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .owner-ops-activity-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -2545,6 +2609,20 @@ textarea { min-height: 100px; resize: vertical; }
 
   .owner-ops-metric-amount {
     font-size: 18px;
+  }
+
+  .owner-ops-volume-scroll {
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .owner-ops-volume-bars {
+    min-width: 640px;
+  }
+
+  .owner-ops-card-gradient .owner-ops-card-head {
+    flex-wrap: wrap;
+    align-items: flex-start;
   }
 }
 
@@ -2744,6 +2822,35 @@ textarea { min-height: 100px; resize: vertical; }
   text-align: right;
 }
 
+.owner-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 94px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.owner-status-pill.active {
+  background: #e8f8ee;
+  color: #157347;
+}
+
+.owner-status-pill.inactive {
+  background: #ffecef;
+  color: #be123c;
+}
+
+.owner-credentials-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
 @media (max-width: 1200px) {
   .invoice-list-summary {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2833,7 +2940,7 @@ textarea { min-height: 100px; resize: vertical; }
 
 .payments-mobile-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
   gap: 8px;
 }
 
@@ -3268,10 +3375,13 @@ textarea { min-height: 100px; resize: vertical; }
     gap: 3px;
   }
 
-  .mobile-nav-icon {
-    font-size: 16px;
-    line-height: 1;
-  }
+.mobile-nav-icon {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1;
+}
 
   .mobile-bottom-nav a.active {
     background: #fff4ea;

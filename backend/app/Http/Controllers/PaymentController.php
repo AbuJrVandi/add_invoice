@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Sale;
+use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -21,6 +24,7 @@ class PaymentController extends Controller
         $query = Payment::query()
             ->with(['invoice:id,invoice_number,customer_name,organization,total,status,amount_paid,balance_remaining'])
             ->latest('paid_at');
+        $this->scopePaymentsForUser($query, $request->user());
 
         if ($request->filled('invoice_number')) {
             $query->whereHas('invoice', function ($q) use ($request) {
@@ -58,6 +62,7 @@ class PaymentController extends Controller
         $query = Invoice::query()
             ->with('items')
             ->whereIn('status', [Invoice::STATUS_PENDING, Invoice::STATUS_DUE]);
+        $this->scopeInvoicesForUser($query, $request->user());
 
         if ($request->filled('invoice_number')) {
             $query->where('invoice_number', 'like', '%' . trim($request->input('invoice_number')) . '%');
@@ -105,7 +110,15 @@ class PaymentController extends Controller
             'notes'          => 'nullable|string|max:500',
         ]);
 
-        $invoice = Invoice::query()->findOrFail($validated['invoice_id']);
+        $invoiceQuery = Invoice::query()->whereKey($validated['invoice_id']);
+        $this->scopeInvoicesForUser($invoiceQuery, $request->user());
+        $invoice = $invoiceQuery->first();
+
+        if (! $invoice) {
+            return response()->json([
+                'message' => 'You can only record payments for your own invoices.',
+            ], 403);
+        }
 
         // Guard: already completed
         if ($invoice->isFullyPaid()) {
@@ -210,8 +223,14 @@ class PaymentController extends Controller
     /**
      * Show a single payment with its invoice.
      */
-    public function show(Payment $payment): JsonResponse
+    public function show(Request $request, Payment $payment): JsonResponse
     {
+        if (! $this->userCanAccessPayment($request->user(), $payment)) {
+            return response()->json([
+                'message' => 'You can only access your own payment records.',
+            ], 403);
+        }
+
         return response()->json(
             $payment->load(['invoice.items', 'creator:id,name,email'])
         );
@@ -222,23 +241,42 @@ class PaymentController extends Controller
      */
     public function receipt(Payment $payment)
     {
-        $payment->load(['invoice.items', 'creator:id,name,email']);
+        return view('print.receipt', $this->buildReceiptViewData($payment));
+    }
 
-        return view('print.receipt', [
-            'receipt_number'  => $payment->receipt_number,
-            'payment_method'  => $payment->payment_method,
-            'amount_paid'     => $payment->amount_paid,
-            'paid_at'         => $payment->paid_at,
-            'paid_at_display' => $payment->paid_at->format('d/m/Y H:i'),
-            'notes'           => $payment->notes,
-            'invoice'         => $payment->invoice,
-            'company'         => [
-                'name'    => 'CIRQON Electronics',
-                'address' => 'No. 4 Light-Foot Boston Street',
-                'phone'   => '+232 74 141141 | +232 79 576950',
-                'email'   => 'Jamesericksoncole57@gmail.com',
-                'logo'    => $this->receiptLogoDataUri(),
-            ],
+    /**
+     * Download receipt as PDF file.
+     */
+    public function receiptPdf(Payment $payment): Response
+    {
+        $data = $this->buildReceiptViewData($payment);
+        $pdf = Pdf::loadView('print.receipt', $data)->setPaper('a4', 'portrait');
+        $filename = 'receipt-'.$payment->receipt_number.'.pdf';
+
+        return response($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Cache-Control' => 'private, max-age=0, must-revalidate',
+        ]);
+    }
+
+    /**
+     * Download receipt as PDF file for authenticated users.
+     */
+    public function receiptPdfDownload(Request $request, Payment $payment): Response
+    {
+        if (! $this->userCanAccessPayment($request->user(), $payment)) {
+            abort(403, 'You can only access your own payment records.');
+        }
+
+        $data = $this->buildReceiptViewData($payment);
+        $pdf = Pdf::loadView('print.receipt', $data)->setPaper('a4', 'portrait');
+        $filename = 'receipt-'.$payment->receipt_number.'.pdf';
+
+        return response($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Cache-Control' => 'private, max-age=0, must-revalidate',
         ]);
     }
 
@@ -257,6 +295,28 @@ class PaymentController extends Controller
         return null;
     }
 
+    private function buildReceiptViewData(Payment $payment): array
+    {
+        $payment->load(['invoice.items', 'creator:id,name,email']);
+
+        return [
+            'receipt_number'  => $payment->receipt_number,
+            'payment_method'  => $payment->payment_method,
+            'amount_paid'     => $payment->amount_paid,
+            'paid_at'         => $payment->paid_at,
+            'paid_at_display' => $payment->paid_at?->format('d/m/Y H:i') ?? '-',
+            'notes'           => $payment->notes,
+            'invoice'         => $payment->invoice,
+            'company'         => [
+                'name'    => 'CIRQON Electronics',
+                'address' => 'No. 4 Light-Foot Boston Street',
+                'phone'   => '+232 74 141141 | +232 79 576950',
+                'email'   => 'Jamesericksoncole57@gmail.com',
+                'logo'    => $this->receiptLogoDataUri(),
+            ],
+        ];
+    }
+
     private function isReceiptNumberUniqueViolation(QueryException $exception): bool
     {
         $sqlState = $exception->errorInfo[0] ?? null;
@@ -272,5 +332,36 @@ class PaymentController extends Controller
         }
 
         return false;
+    }
+
+    private function scopeInvoicesForUser($query, ?User $user): void
+    {
+        if (($user?->role ?? 'admin') === 'admin') {
+            $query->where('created_by_user_id', $user?->id);
+        }
+    }
+
+    private function scopePaymentsForUser($query, ?User $user): void
+    {
+        if (($user?->role ?? 'admin') === 'admin') {
+            $query->whereHas('invoice', function ($invoiceQuery) use ($user): void {
+                $invoiceQuery->where('created_by_user_id', $user?->id);
+            });
+        }
+    }
+
+    private function userCanAccessPayment(?User $user, Payment $payment): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        if (($user->role ?? 'admin') === 'owner') {
+            return true;
+        }
+
+        $invoiceOwnerId = (int) ($payment->invoice()->value('created_by_user_id') ?? 0);
+
+        return $invoiceOwnerId === (int) $user->id;
     }
 }

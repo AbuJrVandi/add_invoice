@@ -28,28 +28,28 @@ function navConfigForRole(role) {
   if (role === 'owner') {
     return {
       sideNav: [
-        { to: '/owner/dashboard', label: 'Analytics', icon: '📈', exact: true },
-        { to: '/owner/admin-credentials', label: 'Admin Access', icon: '🔐' },
+        { to: '/owner/dashboard', label: 'Analytics', exact: true },
+        { to: '/owner/admin-credentials', label: 'Admin Access' },
       ],
       mobileNav: [
-        { to: '/owner/dashboard', label: 'Home', icon: '📈', exact: true },
-        { to: '/owner/admin-credentials', label: 'Admins', icon: '🔐' },
+        { to: '/owner/dashboard', label: 'Home', exact: true },
+        { to: '/owner/admin-credentials', label: 'Admins' },
       ],
     };
   }
 
   return {
     sideNav: [
-      { to: '/', label: 'Overview', icon: '📊', exact: true },
-      { to: '/invoices', label: 'Invoices', icon: '📋' },
-      { to: '/payments', label: 'Payments', icon: '💰' },
-      { to: '/pdf-settings', label: 'PDF Settings', icon: '⚙️' },
+      { to: '/', label: 'Overview', exact: true },
+      { to: '/invoices', label: 'Invoices' },
+      { to: '/payments', label: 'Payments' },
+      { to: '/pdf-settings', label: 'PDF Settings' },
     ],
     mobileNav: [
-      { to: '/', label: 'Home', icon: '🏠', exact: true },
-      { to: '/invoices', label: 'Invoices', icon: '📋' },
-      { to: '/payments', label: 'Payments', icon: '💳' },
-      { to: '/pdf-settings', label: 'Settings', icon: '⚙️' },
+      { to: '/', label: 'Home', exact: true },
+      { to: '/invoices', label: 'Invoices' },
+      { to: '/payments', label: 'Payments' },
+      { to: '/pdf-settings', label: 'Settings' },
     ],
   };
 }
@@ -139,7 +139,7 @@ export default function ProtectedLayout() {
             onClick={() => setSidebarCollapsed((prev) => !prev)}
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {sidebarCollapsed ? '▶' : '◀'}
+            {sidebarCollapsed ? '>>' : '<<'}
           </button>
         </div>
 
@@ -165,7 +165,7 @@ export default function ProtectedLayout() {
             {!sidebarCollapsed && <div className="sidebar-user-email">{user?.email}</div>}
           </div>
           <button type="button" onClick={logout} className="sidebar-logout-btn" id="sidebar-logout">
-            {sidebarCollapsed ? '🚪' : '← Sign Out'}
+            {sidebarCollapsed ? 'Out' : '<- Sign Out'}
           </button>
         </div>
       </aside>
