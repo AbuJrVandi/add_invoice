@@ -12,6 +12,7 @@ class InvoicePdfSetting extends Model
     protected $fillable = [
         'company_name',
         'issuer_name',
+        'payment_instructions',
         'logo_path',
         'signature_path',
     ];

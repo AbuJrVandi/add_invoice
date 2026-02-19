@@ -36,8 +36,8 @@
         }
 
         .logo-image {
-            max-width: 160px;
-            max-height: 90px;
+            max-width: 180px;
+            max-height: 102px;
         }
 
         .company-address {
@@ -474,12 +474,7 @@
                     <hr class="payment-thin-divider">
                     <div class="payment-title">PAYMENT INSTRUCTIONS</div>
                     <div class="payment-content">
-                        Please make payment to:<br>
-                        <span class="label">Bank:</span> {{ $company['bank'] ?? 'UBA' }}<br>
-                        <span class="label">Account Name:</span> {{ $company['account_name'] ?? 'Wickburn Services SL LTD' }}<br>
-                        <span class="label">Account No:</span> {{ $company['account_no'] ?? '5401-1003-000922-9' }}<br>
-                        <span class="label">IBAN:</span> {{ $company['iban'] ?? '010401100300092257' }}<br>
-                        <span class="label">BIC/SWIFT CODE:</span> {{ $company['swift_code'] ?? 'UNAFSLFR' }}
+                        {!! nl2br(e($company['payment_instructions'] ?? '')) !!}
                     </div>
                 </td>
                 <td class="signature-cell">

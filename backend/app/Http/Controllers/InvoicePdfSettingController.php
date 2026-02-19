@@ -23,10 +23,12 @@ class InvoicePdfSettingController extends Controller
         $settings = InvoicePdfSetting::query()->firstOrCreate([], [
             'company_name' => 'CIRQON Electronics',
             'issuer_name' => 'Administrator',
+            'payment_instructions' => $this->defaultPaymentInstructions(),
         ]);
 
         $settings->company_name = $validated['company_name'];
         $settings->issuer_name = $validated['issuer_name'];
+        $settings->payment_instructions = trim((string) ($validated['payment_instructions'] ?? '')) ?: $this->defaultPaymentInstructions();
 
         if ($request->hasFile('logo')) {
             if ($settings->logo_path) {
@@ -56,6 +58,7 @@ class InvoicePdfSettingController extends Controller
             return [
                 'company_name' => 'CIRQON Electronics',
                 'issuer_name' => 'Administrator',
+                'payment_instructions' => $this->defaultPaymentInstructions(),
                 'logo_path' => null,
                 'signature_path' => null,
                 'logo_url' => null,
@@ -66,10 +69,23 @@ class InvoicePdfSettingController extends Controller
         return [
             'company_name' => $settings->company_name,
             'issuer_name' => $settings->issuer_name,
+            'payment_instructions' => $settings->payment_instructions ?: $this->defaultPaymentInstructions(),
             'logo_path' => $settings->logo_path,
             'signature_path' => $settings->signature_path,
             'logo_url' => $settings->logo_path ? Storage::disk('public')->url($settings->logo_path) : null,
             'signature_url' => $settings->signature_path ? Storage::disk('public')->url($settings->signature_path) : null,
         ];
+    }
+
+    private function defaultPaymentInstructions(): string
+    {
+        return implode("\n", [
+            'Please make payment to:',
+            'Bank: UBA',
+            'Account Name: Wickburn Services SL LTD',
+            'Account No: 5401-1003-000922-9',
+            'IBAN: 010401100300092257',
+            'BIC/SWIFT CODE: UNAFSLFR',
+        ]);
     }
 }

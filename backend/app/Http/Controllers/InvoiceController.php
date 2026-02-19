@@ -306,12 +306,14 @@ class InvoiceController extends Controller
                 'Payment is due within 15 days',
                 'Please make checks payable to: '.($settings?->company_name ?? 'CIRQON Electronics').'.',
             ],
-            // Payment details matching the reference PDF
-            'bank' => 'UBA',
-            'account_name' => 'Wickburn Services SL LTD',
-            'account_no' => '5401-1003-000922-9',
-            'iban' => '010401100300092257',
-            'swift_code' => 'UNAFSLFR',
+            'payment_instructions' => $settings?->payment_instructions ?: implode("\n", [
+                'Please make payment to:',
+                'Bank: UBA',
+                'Account Name: Wickburn Services SL LTD',
+                'Account No: 5401-1003-000922-9',
+                'IBAN: 010401100300092257',
+                'BIC/SWIFT CODE: UNAFSLFR',
+            ]),
             'contact_person' => 'Vandi Abu',
             'contact_email' => 'Jamesericksoncole57@gmail.com',
         ];

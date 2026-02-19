@@ -10,6 +10,14 @@ function PdfSettings() {
   const [form, setForm] = useState({
     company_name: 'CIRQON Electronics',
     issuer_name: 'Administrator',
+    payment_instructions: [
+      'Please make payment to:',
+      'Bank: UBA',
+      'Account Name: Wickburn Services SL LTD',
+      'Account No: 5401-1003-000922-9',
+      'IBAN: 010401100300092257',
+      'BIC/SWIFT CODE: UNAFSLFR',
+    ].join('\n'),
     logo: null,
     signature: null,
   });
@@ -31,6 +39,7 @@ function PdfSettings() {
           ...prev,
           company_name: data.company_name || 'CIRQON Electronics',
           issuer_name: data.issuer_name || 'Administrator',
+          payment_instructions: data.payment_instructions || prev.payment_instructions,
         }));
 
         setCurrent({
@@ -65,6 +74,7 @@ function PdfSettings() {
       const payload = new FormData();
       payload.append('company_name', form.company_name);
       payload.append('issuer_name', form.issuer_name);
+      payload.append('payment_instructions', form.payment_instructions);
       if (form.logo) payload.append('logo', form.logo);
       if (form.signature) payload.append('signature', form.signature);
 
@@ -124,6 +134,17 @@ function PdfSettings() {
               required
             />
           </div>
+        </div>
+
+        <div>
+          <label>Payment Instructions</label>
+          <p className="muted">These details will appear in the invoice printout payment instructions section.</p>
+          <textarea
+            value={form.payment_instructions}
+            onChange={(e) => setForm((prev) => ({ ...prev, payment_instructions: e.target.value }))}
+            placeholder="Enter bank or payment instructions shown on invoices"
+            rows={7}
+          />
         </div>
 
         <div className="settings-grid">

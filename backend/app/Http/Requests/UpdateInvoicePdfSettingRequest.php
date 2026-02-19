@@ -16,6 +16,7 @@ class UpdateInvoicePdfSettingRequest extends FormRequest
         return [
             'company_name' => ['required', 'string', 'max:255'],
             'issuer_name' => ['required', 'string', 'max:255'],
+            'payment_instructions' => ['nullable', 'string', 'max:5000'],
             'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:3072'],
             'signature' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:3072'],
         ];
