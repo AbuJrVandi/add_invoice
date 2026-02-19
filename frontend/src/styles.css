@@ -243,10 +243,11 @@ textarea { min-height: 100px; resize: vertical; }
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1;
 }
 
 .sidebar-nav a .nav-label {
@@ -351,12 +352,44 @@ textarea { min-height: 100px; resize: vertical; }
   backdrop-filter: blur(12px);
 }
 
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.navbar-menu-btn {
+  display: none;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: 15px;
+  transition: all var(--transition-fast);
+}
+
+.navbar-menu-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary-dark);
+  background: #fffcf8;
+}
+
 .navbar-page-title {
   font-family: 'Outfit', sans-serif;
   font-size: 20px;
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.01em;
+}
+
+.sidebar-backdrop {
+  display: none;
 }
 
 .navbar-right {
@@ -3231,6 +3264,7 @@ textarea { min-height: 100px; resize: vertical; }
     top: 0;
     padding: 0;
     box-shadow: none;
+    z-index: 45;
   }
 
   .sidebar-nav {
@@ -3261,11 +3295,35 @@ textarea { min-height: 100px; resize: vertical; }
   .top-navbar {
     display: flex;
     grid-column: 2;
+    z-index: 40;
   }
 
   .content {
     grid-column: 2;
     padding: 20px;
+  }
+
+  .navbar-menu-btn {
+    display: inline-flex;
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(13, 17, 23, 0.26);
+    opacity: 0;
+    pointer-events: none;
+    border: 0;
+    margin: 0;
+    padding: 0;
+    z-index: 38;
+    transition: opacity var(--transition-fast);
+  }
+
+  .sidebar-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .stats-grid,
@@ -3376,10 +3434,10 @@ textarea { min-height: 100px; resize: vertical; }
   }
 
 .mobile-nav-icon {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
   line-height: 1;
 }
 

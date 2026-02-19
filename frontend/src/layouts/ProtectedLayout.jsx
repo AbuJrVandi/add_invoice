@@ -28,28 +28,28 @@ function navConfigForRole(role) {
   if (role === 'owner') {
     return {
       sideNav: [
-        { to: '/owner/dashboard', label: 'Analytics', exact: true },
-        { to: '/owner/admin-credentials', label: 'Admin Access' },
+        { to: '/owner/dashboard', label: 'Analytics', icon: '📊', exact: true },
+        { to: '/owner/admin-credentials', label: 'Admin Access', icon: '🛡️' },
       ],
       mobileNav: [
-        { to: '/owner/dashboard', label: 'Home', exact: true },
-        { to: '/owner/admin-credentials', label: 'Admins' },
+        { to: '/owner/dashboard', label: 'Home', icon: '🏠', exact: true },
+        { to: '/owner/admin-credentials', label: 'Admins', icon: '👥' },
       ],
     };
   }
 
   return {
     sideNav: [
-      { to: '/', label: 'Overview', exact: true },
-      { to: '/invoices', label: 'Invoices' },
-      { to: '/payments', label: 'Payments' },
-      { to: '/pdf-settings', label: 'PDF Settings' },
+      { to: '/', label: 'Overview', icon: '📈', exact: true },
+      { to: '/invoices', label: 'Invoices', icon: '🧾' },
+      { to: '/payments', label: 'Payments', icon: '💳' },
+      { to: '/pdf-settings', label: 'PDF Settings', icon: '⚙️' },
     ],
     mobileNav: [
-      { to: '/', label: 'Home', exact: true },
-      { to: '/invoices', label: 'Invoices' },
-      { to: '/payments', label: 'Payments' },
-      { to: '/pdf-settings', label: 'Settings' },
+      { to: '/', label: 'Home', icon: '🏠', exact: true },
+      { to: '/invoices', label: 'Invoices', icon: '🧾' },
+      { to: '/payments', label: 'Payments', icon: '💳' },
+      { to: '/pdf-settings', label: 'Settings', icon: '⚙️' },
     ],
   };
 }
@@ -85,6 +85,7 @@ export default function ProtectedLayout() {
   const nav = navConfigForRole(user?.role);
   const sideNav = nav.sideNav;
   const mobileNav = nav.mobileNav;
+  const isSidebarOpen = !sidebarCollapsed;
 
   if (isMobile) {
     return (
@@ -124,6 +125,14 @@ export default function ProtectedLayout() {
 
   return (
     <div className={`app-shell ${isTablet ? 'tablet-shell' : 'desktop-shell'}${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+      <button
+        type="button"
+        className={`sidebar-backdrop${isTablet && isSidebarOpen ? ' open' : ''}`}
+        onClick={() => setSidebarCollapsed(true)}
+        aria-label="Close sidebar"
+        tabIndex={isTablet && isSidebarOpen ? 0 : -1}
+      ></button>
+
       <aside className="sidebar" id="sidebar">
         <div className="sidebar-brand">
           <img src="/logo.png" alt="CIRQON" className="sidebar-brand-logo" />
@@ -151,6 +160,11 @@ export default function ProtectedLayout() {
               to={item.to}
               end={item.exact}
               title={item.label}
+              onClick={() => {
+                if (isTablet) {
+                  setSidebarCollapsed(true);
+                }
+              }}
               className={({ isActive }) => (isActive ? 'active' : '')}
             >
               <span className="nav-icon">{item.icon}</span>
@@ -171,7 +185,17 @@ export default function ProtectedLayout() {
       </aside>
 
       <header className="top-navbar" id="top-navbar">
-        <h1 className="navbar-page-title">{pageTitle}</h1>
+        <div className="navbar-left">
+          <button
+            type="button"
+            className="navbar-menu-btn"
+            onClick={() => setSidebarCollapsed((previous) => !previous)}
+            aria-label={sidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
+          >
+            {sidebarCollapsed ? '☰' : '✕'}
+          </button>
+          <h1 className="navbar-page-title">{pageTitle}</h1>
+        </div>
 
         <div className="navbar-right">
           <button type="button" className="navbar-icon-btn" title="Notifications" id="notifications-btn">
@@ -186,7 +210,15 @@ export default function ProtectedLayout() {
         </div>
       </header>
 
-      <main className="content" id="main-content">
+      <main
+        className="content"
+        id="main-content"
+        onClick={() => {
+          if (isTablet && isSidebarOpen) {
+            setSidebarCollapsed(true);
+          }
+        }}
+      >
         <Outlet />
       </main>
     </div>
