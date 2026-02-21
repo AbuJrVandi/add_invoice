@@ -42,6 +42,8 @@ function CreateInvoice({ mode = 'admin' }) {
               invoice_date: source.invoice_date || '',
               due_date: source.due_date || '',
               po_number: source.po_number || '',
+              requested_by: source.requested_by || '',
+              delivery_method: source.delivery_method || 'pickup',
               tax: Number(source.tax || 0),
               items: Array.isArray(source.items) ? source.items.map((item) => ({
                 description: item.description || '',

@@ -91,6 +91,8 @@ class InvoiceController extends Controller
                         'invoice_date' => $validated['invoice_date'],
                         'due_date' => $validated['due_date'],
                         'po_number' => $validated['po_number'] ?? null,
+                        'requested_by' => $validated['requested_by'] ?? null,
+                        'delivery_method' => $validated['delivery_method'] ?? 'pickup',
                         'subtotal' => $subtotal,
                         'tax' => $tax,
                         'total' => $total,
@@ -165,6 +167,8 @@ class InvoiceController extends Controller
             'invoice_date' => $validated['invoice_date'],
             'due_date' => $validated['due_date'],
             'po_number' => $validated['po_number'] ?? null,
+            'requested_by' => $validated['requested_by'] ?? null,
+            'delivery_method' => $validated['delivery_method'] ?? 'pickup',
             'subtotal' => $computed['subtotal'],
             'tax' => $computed['tax'],
             'total' => $computed['total'],
@@ -292,31 +296,73 @@ class InvoiceController extends Controller
             }
         }
 
+        // Determine stamp path (optional) - renders below signature
+        $stampPath = null;
+        if ($settings?->stamp_path) {
+            $uploadedStampPath = storage_path('app/public/'.$settings->stamp_path);
+            if (file_exists($uploadedStampPath)) {
+                $stampPath = $uploadedStampPath;
+            }
+        }
+
+        if (! $stampPath) {
+            $defaultStampPng = public_path('assets/default-stamp.png');
+            if (file_exists($defaultStampPng)) {
+                $stampPath = $defaultStampPng;
+            }
+        }
+
+        if (! $stampPath) {
+            $defaultStampJpeg = public_path('assets/default-stamp.jpeg');
+            if (file_exists($defaultStampJpeg)) {
+                $stampPath = $defaultStampJpeg;
+            }
+        }
+
         return [
             'name' => $settings?->company_name ?? 'CIRQON Electronics',
-            'address_lines' => [
+            'address_lines' => $this->linesFromMultiline($settings?->company_address, [
                 'No. 4 Light-Foot Boston Street',
                 'Via Radwon Street, Freetown',
-            ],
-            'phone' => '+232 74 141141 | +232 79 576950',
+            ]),
+            'phone' => $settings?->company_phone ?: '+232 74 141141 | +232 79 576950',
+            'website' => $settings?->company_website ?: 'www.cirqon.example',
+            'tax_id' => $settings?->tax_id ?: 'N/A',
+            'currency_code' => strtoupper((string) ($settings?->currency_code ?: 'SLL')),
             'logo' => $logoPath,
             'signature' => $signaturePath,
+            'stamp' => $stampPath,
             'issuer_name' => $settings?->issuer_name ?? 'CEO- Vandi Abu',
-            'terms' => [
-                'Payment is due within 15 days',
-                'Please make checks payable to: '.($settings?->company_name ?? 'CIRQON Electronics').'.',
-            ],
+            'terms' => $this->linesFromMultiline($settings?->terms_conditions, [
+                'Payment is due within 15 days from invoice date.',
+                'Goods once delivered are not returnable.',
+                'A late fee may apply on overdue balances.',
+                'This invoice was generated electronically and is valid without a physical stamp.',
+            ]),
             'payment_instructions' => $settings?->payment_instructions ?: implode("\n", [
                 'Please make payment to:',
-                'Bank: UBA',
-                'Account Name: Wickburn Services SL LTD',
+                'Bank: EcoBank',
+                'Account Name: CirQon Limited Services SL LTD',
                 'Account No: 5401-1003-000922-9',
                 'IBAN: 010401100300092257',
                 'BIC/SWIFT CODE: UNAFSLFR',
             ]),
-            'contact_person' => 'Vandi Abu',
-            'contact_email' => 'Jamesericksoncole57@gmail.com',
+            'contact_person' => $settings?->contact_person ?: 'Vandi Abu',
+            'contact_email' => $settings?->company_email ?: 'Jamesericksoncole57@gmail.com',
         ];
+    }
+
+    private function linesFromMultiline(?string $value, array $fallback): array
+    {
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return $fallback;
+        }
+
+        $lines = preg_split('/\r\n|\r|\n/', $raw) ?: [];
+        $clean = array_values(array_filter(array_map(static fn (string $line): string => trim($line), $lines)));
+
+        return $clean !== [] ? $clean : $fallback;
     }
 
     /**
@@ -438,11 +484,27 @@ class InvoiceController extends Controller
             return false;
         }
 
+        $invoiceOwnerId = (int) ($invoice->created_by_user_id ?? 0);
+
         if (($user->role ?? 'admin') === 'owner') {
-            return true;
+            $ownerId = (int) $user->id;
+
+            if ($invoiceOwnerId === $ownerId) {
+                return true;
+            }
+
+            if ($invoiceOwnerId <= 0) {
+                return false;
+            }
+
+            return User::query()
+                ->whereKey($invoiceOwnerId)
+                ->where('role', 'admin')
+                ->where('managed_by_owner_id', $ownerId)
+                ->exists();
         }
 
-        return (int) ($invoice->created_by_user_id ?? 0) === (int) $user->id;
+        return $invoiceOwnerId === (int) $user->id;
     }
 
     private function isInvoiceNumberUniqueViolation(QueryException $exception): bool

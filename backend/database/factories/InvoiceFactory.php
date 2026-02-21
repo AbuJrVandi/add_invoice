@@ -36,6 +36,8 @@ class InvoiceFactory extends Factory
             'invoice_date' => $invoiceDate,
             'due_date' => $dueDate,
             'po_number' => 'PO-' . $this->faker->numerify('#####'),
+            'requested_by' => $this->faker->name(),
+            'delivery_method' => $this->faker->randomElement(['pickup', 'delivery', 'courier']),
             'subtotal' => $subtotal,
             'tax' => $tax,
             'total' => $total,

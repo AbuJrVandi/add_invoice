@@ -22,6 +22,8 @@ class StoreInvoiceRequest extends FormRequest
             'invoice_date' => ['required', 'date'],
             'due_date' => ['required', 'date', 'after_or_equal:invoice_date'],
             'po_number' => ['nullable', 'string', 'max:100'],
+            'requested_by' => ['nullable', 'string', 'max:255'],
+            'delivery_method' => ['nullable', 'string', 'in:pickup,delivery,courier'],
             'tax' => ['nullable', 'numeric', 'min:0'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.description' => ['required', 'string', 'max:1000'],

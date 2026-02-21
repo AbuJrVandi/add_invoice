@@ -356,11 +356,25 @@ class PaymentController extends Controller
             return false;
         }
 
-        if (($user->role ?? 'admin') === 'owner') {
-            return true;
-        }
-
         $invoiceOwnerId = (int) ($payment->invoice()->value('created_by_user_id') ?? 0);
+
+        if (($user->role ?? 'admin') === 'owner') {
+            $ownerId = (int) $user->id;
+
+            if ($invoiceOwnerId === $ownerId) {
+                return true;
+            }
+
+            if ($invoiceOwnerId <= 0) {
+                return false;
+            }
+
+            return User::query()
+                ->whereKey($invoiceOwnerId)
+                ->where('role', 'admin')
+                ->where('managed_by_owner_id', $ownerId)
+                ->exists();
+        }
 
         return $invoiceOwnerId === (int) $user->id;
     }

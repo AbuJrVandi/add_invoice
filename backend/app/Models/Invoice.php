@@ -27,6 +27,8 @@ class Invoice extends Model
         'invoice_date',
         'due_date',
         'po_number',
+        'requested_by',
+        'delivery_method',
         'subtotal',
         'tax',
         'total',

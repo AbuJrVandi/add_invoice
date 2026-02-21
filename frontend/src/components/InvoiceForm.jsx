@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import useResponsive from '../hooks/useResponsive';
 
 const emptyItem = { description: '', quantity: 1, unit_price: 0, amount: 0 };
-const mobileSteps = ['Customer', 'Dates', 'Addresses', 'Items', 'Totals'];
+const mobileSteps = ['Customer', 'Dates', 'Bill To', 'Items', 'Totals'];
 
 function formatNumberForDisplay(value) {
   const numeric = Number(value || 0);
@@ -13,18 +13,44 @@ function formatNumberForDisplay(value) {
   return String(parseFloat(numeric.toFixed(2)));
 }
 
+function parseBillTo(rawBillTo, fallbackOrg = '') {
+  const lines = String(rawBillTo || '')
+    .split(/\r\n|\r|\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const byLabel = {};
+  lines.forEach((line) => {
+    const match = line.match(/^([A-Za-z ]+):\s*(.+)$/);
+    if (!match) return;
+    byLabel[match[1].trim().toLowerCase()] = match[2].trim();
+  });
+
+  const emailFromLine = lines.find((line) => /@/.test(line)) || '';
+  const phoneFromLine = lines.find((line) => /[+0-9]/.test(line) && !/@/.test(line)) || '';
+  const addressFromLine = lines.find((line) => line !== emailFromLine && line !== phoneFromLine) || '';
+
+  return {
+    bill_to_org: byLabel.org || fallbackOrg || '',
+    bill_to_address: byLabel.address || addressFromLine,
+    bill_to_phone: byLabel.phone || phoneFromLine,
+    bill_to_email: byLabel.email || emailFromLine,
+  };
+}
+
 function InvoiceForm({ onPreview, loading, invoiceNumber, initialData }) {
   const { isMobile } = useResponsive();
   const [mobileStep, setMobileStep] = useState(0);
   const [stepError, setStepError] = useState('');
+  const billToFields = parseBillTo(initialData?.bill_to, initialData?.organization);
   const [form, setForm] = useState({
     customer_name: initialData?.customer_name ?? '',
-    organization: initialData?.organization ?? '',
-    bill_to: initialData?.bill_to ?? '',
-    ship_to: initialData?.ship_to ?? '',
+    bill_to_org: billToFields.bill_to_org,
+    bill_to_address: billToFields.bill_to_address,
+    bill_to_phone: billToFields.bill_to_phone,
+    bill_to_email: billToFields.bill_to_email,
     invoice_date: initialData?.invoice_date ?? '',
     due_date: initialData?.due_date ?? '',
-    po_number: initialData?.po_number ?? '',
     tax: initialData?.tax ?? 0,
     items: initialData?.items?.length ? initialData.items.map((item) => ({
       description: item.description ?? '',
@@ -66,19 +92,39 @@ function InvoiceForm({ onPreview, loading, invoiceNumber, initialData }) {
     });
   };
 
-  const buildPayload = () => ({
-    ...form,
-    invoice_number: invoiceNumber,
-    subtotal: Number(subtotal.toFixed(2)),
-    tax: Number(Number(form.tax || 0).toFixed(2)),
-    total: Number(total.toFixed(2)),
-    items: form.items.map((item) => ({
-      ...item,
-      quantity: Number(item.quantity),
-      unit_price: Number(item.unit_price),
-      amount: Number(item.amount),
-    })),
-  });
+  const buildPayload = () => {
+    const org = form.bill_to_org.trim();
+    const address = form.bill_to_address.trim();
+    const phone = form.bill_to_phone.trim();
+    const email = form.bill_to_email.trim();
+
+    return {
+      invoice_number: invoiceNumber,
+      customer_name: form.customer_name.trim(),
+      organization: org,
+      bill_to: [
+        `ORG: ${org || 'N/A'}`,
+        `ADDRESS: ${address || 'N/A'}`,
+        `PHONE: ${phone || 'N/A'}`,
+        `EMAIL: ${email || 'N/A'}`,
+      ].join('\n'),
+      ship_to: address || org || form.customer_name.trim() || 'N/A',
+      invoice_date: form.invoice_date,
+      due_date: form.due_date,
+      po_number: null,
+      requested_by: null,
+      delivery_method: 'pickup',
+      subtotal: Number(subtotal.toFixed(2)),
+      tax: Number(Number(form.tax || 0).toFixed(2)),
+      total: Number(total.toFixed(2)),
+      items: form.items.map((item) => ({
+        ...item,
+        quantity: Number(item.quantity),
+        unit_price: Number(item.unit_price),
+        amount: Number(item.amount),
+      })),
+    };
+  };
 
   const submitPreview = async () => {
     await onPreview(buildPayload());
@@ -86,13 +132,13 @@ function InvoiceForm({ onPreview, loading, invoiceNumber, initialData }) {
 
   const validateStep = (stepIndex) => {
     if (stepIndex === 0) {
-      return Boolean(form.customer_name.trim() && form.organization.trim());
+      return Boolean(form.customer_name.trim());
     }
     if (stepIndex === 1) {
       return Boolean(form.invoice_date && form.due_date);
     }
     if (stepIndex === 2) {
-      return Boolean(form.bill_to.trim() && form.ship_to.trim());
+      return Boolean(form.bill_to_org.trim() && form.bill_to_address.trim());
     }
     if (stepIndex === 3) {
       return form.items.every((item) => item.description.trim() && Number(item.quantity) > 0 && Number(item.unit_price) >= 0);
@@ -152,19 +198,6 @@ function InvoiceForm({ onPreview, loading, invoiceNumber, initialData }) {
                   onChange={(e) => updateField('customer_name', e.target.value)}
                 />
               </div>
-              <div>
-                <label>Organization</label>
-                <input
-                  required
-                  placeholder="Enter organization"
-                  value={form.organization}
-                  onChange={(e) => updateField('organization', e.target.value)}
-                />
-              </div>
-              <div>
-                <label>P.O Number</label>
-                <input placeholder="Optional" value={form.po_number} onChange={(e) => updateField('po_number', e.target.value)} />
-              </div>
             </div>
           ) : null}
 
@@ -184,12 +217,39 @@ function InvoiceForm({ onPreview, loading, invoiceNumber, initialData }) {
           {mobileStep === 2 ? (
             <div className="stacked">
               <div>
-                <label>Bill To</label>
-                <textarea required placeholder="Billing address" value={form.bill_to} onChange={(e) => updateField('bill_to', e.target.value)} />
+                <label>ORG</label>
+                <input
+                  required
+                  placeholder="Organization name"
+                  value={form.bill_to_org}
+                  onChange={(e) => updateField('bill_to_org', e.target.value)}
+                />
               </div>
               <div>
-                <label>Ship To</label>
-                <textarea required placeholder="Shipping address" value={form.ship_to} onChange={(e) => updateField('ship_to', e.target.value)} />
+                <label>ADDRESS</label>
+                <textarea
+                  required
+                  placeholder="Billing address"
+                  value={form.bill_to_address}
+                  onChange={(e) => updateField('bill_to_address', e.target.value)}
+                />
+              </div>
+              <div>
+                <label>PHONE</label>
+                <input
+                  placeholder="Phone number"
+                  value={form.bill_to_phone}
+                  onChange={(e) => updateField('bill_to_phone', e.target.value)}
+                />
+              </div>
+              <div>
+                <label>EMAIL</label>
+                <input
+                  type="email"
+                  placeholder="Billing email"
+                  value={form.bill_to_email}
+                  onChange={(e) => updateField('bill_to_email', e.target.value)}
+                />
               </div>
             </div>
           ) : null}
@@ -295,14 +355,6 @@ function InvoiceForm({ onPreview, loading, invoiceNumber, initialData }) {
           <input required placeholder="Enter customer name" value={form.customer_name} onChange={(e) => updateField('customer_name', e.target.value)} />
         </div>
         <div>
-          <label>Organization</label>
-          <input required placeholder="Enter organization" value={form.organization} onChange={(e) => updateField('organization', e.target.value)} />
-        </div>
-        <div>
-          <label>P.O Number</label>
-          <input placeholder="Optional" value={form.po_number} onChange={(e) => updateField('po_number', e.target.value)} />
-        </div>
-        <div>
           <label>Invoice Date</label>
           <input required type="date" value={form.invoice_date} onChange={(e) => updateField('invoice_date', e.target.value)} />
         </div>
@@ -312,14 +364,45 @@ function InvoiceForm({ onPreview, loading, invoiceNumber, initialData }) {
         </div>
       </div>
 
+      <div className="stacked">
+        <h3>Bill To Details</h3>
+      </div>
+
       <div className="grid-2">
         <div>
-          <label>Bill To</label>
-          <textarea required placeholder="Billing address" value={form.bill_to} onChange={(e) => updateField('bill_to', e.target.value)} />
+          <label>ORG</label>
+          <input
+            required
+            placeholder="Organization name"
+            value={form.bill_to_org}
+            onChange={(e) => updateField('bill_to_org', e.target.value)}
+          />
         </div>
         <div>
-          <label>Ship To</label>
-          <textarea required placeholder="Shipping address" value={form.ship_to} onChange={(e) => updateField('ship_to', e.target.value)} />
+          <label>ADDRESS</label>
+          <textarea
+            required
+            placeholder="Billing address"
+            value={form.bill_to_address}
+            onChange={(e) => updateField('bill_to_address', e.target.value)}
+          />
+        </div>
+        <div>
+          <label>PHONE</label>
+          <input
+            placeholder="Phone number"
+            value={form.bill_to_phone}
+            onChange={(e) => updateField('bill_to_phone', e.target.value)}
+          />
+        </div>
+        <div>
+          <label>EMAIL</label>
+          <input
+            type="email"
+            placeholder="Billing email"
+            value={form.bill_to_email}
+            onChange={(e) => updateField('bill_to_email', e.target.value)}
+          />
         </div>
       </div>
 
