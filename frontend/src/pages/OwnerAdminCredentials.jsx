@@ -52,6 +52,7 @@ export default function OwnerAdminCredentials() {
   const [updatingUserId, setUpdatingUserId] = useState(null);
   const [editingUserId, setEditingUserId] = useState(null);
   const [togglingUserId, setTogglingUserId] = useState(null);
+  const [deletingUserId, setDeletingUserId] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -183,6 +184,34 @@ export default function OwnerAdminCredentials() {
     }
   };
 
+  const deleteAdmin = async (admin) => {
+    const confirmed = window.confirm(
+      `Delete ${admin.name} and permanently remove all invoices, receipts, and sales created by this admin? This cannot be undone.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingUserId(admin.id);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await api.delete(`/owner/admin-credentials/${admin.id}`);
+      const data = response.data?.data || {};
+      const message = response.data?.message || 'Admin account deleted.';
+      setSuccess(
+        `${message} Removed ${Number(data.deleted_invoices || 0)} invoices, ${Number(data.deleted_receipts || 0)} receipts, and ${Number(data.deleted_sales || 0)} sales entries.`
+      );
+      await fetchAdmins();
+    } catch (requestError) {
+      setError(extractErrorMessage(requestError, 'Unable to delete admin account.'));
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
+
   const credentialCount = useMemo(() => admins.length, [admins]);
 
   return (
@@ -310,6 +339,14 @@ export default function OwnerAdminCredentials() {
                     >
                       {updatingUserId === admin.id ? 'Updating...' : 'Change Password'}
                     </button>
+                    <button
+                      type="button"
+                      className="button btn-sm button-danger"
+                      onClick={() => deleteAdmin(admin)}
+                      disabled={deletingUserId === admin.id}
+                    >
+                      {deletingUserId === admin.id ? 'Deleting...' : 'Delete + Purge'}
+                    </button>
                   </div>
                 </article>
               ))
@@ -377,6 +414,15 @@ export default function OwnerAdminCredentials() {
                           disabled={updatingUserId === admin.id}
                         >
                           {updatingUserId === admin.id ? 'Updating...' : 'Change Password'}
+                        </button>
+                        {' '}
+                        <button
+                          type="button"
+                          className="button btn-sm button-danger"
+                          onClick={() => deleteAdmin(admin)}
+                          disabled={deletingUserId === admin.id}
+                        >
+                          {deletingUserId === admin.id ? 'Deleting...' : 'Delete + Purge'}
                         </button>
                       </td>
                     </tr>

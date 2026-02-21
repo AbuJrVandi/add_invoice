@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 function InvoicePdfViewer() {
   const { invoiceId } = useParams();
+  const location = useLocation();
   const { user } = useAuth();
   const [pdfUrl, setPdfUrl] = useState('');
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState('');
-  const backPath = user?.role === 'owner' ? '/owner/dashboard' : '/invoices';
+  const ownerBackPath = location?.state?.backTo || '/owner/operations/invoices';
+  const backPath = user?.role === 'owner' ? ownerBackPath : '/invoices';
 
   useEffect(() => {
     let objectUrl = '';
@@ -74,7 +76,7 @@ function InvoicePdfViewer() {
         <p className="error panel">{error}</p>
         <div>
           <Link className="button button-outline" to={backPath}>
-            {user?.role === 'owner' ? 'Back to Owner Dashboard' : 'Back to Invoices'}
+            {user?.role === 'owner' ? 'Back to Admin Activity' : 'Back to Invoices'}
           </Link>
         </div>
       </div>

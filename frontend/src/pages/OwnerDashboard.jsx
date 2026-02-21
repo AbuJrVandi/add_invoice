@@ -81,22 +81,6 @@ function buildSparkPath(values, width, height, padding) {
     .join(' ');
 }
 
-function invoiceStatusChipClass(status) {
-  if (status === 'completed' || status === 'paid') {
-    return 'owner-ops-chip good';
-  }
-
-  if (status === 'due') {
-    return 'owner-ops-chip warning';
-  }
-
-  if (status === 'pending') {
-    return 'owner-ops-chip danger';
-  }
-
-  return 'owner-ops-chip neutral';
-}
-
 export default function OwnerDashboard() {
   const { user } = useAuth();
 
@@ -160,10 +144,6 @@ export default function OwnerDashboard() {
     distributions: {
       invoice_status: [],
       payment_methods: [],
-    },
-    recent: {
-      invoices: [],
-      receipts: [],
     },
   });
 
@@ -285,38 +265,6 @@ export default function OwnerDashboard() {
     return Math.max(Math.min(ratio, 82), 8);
   };
 
-  const invoiceActivityRows = useMemo(
-    () => (analytics.recent?.invoices || []).map((invoice) => ({
-      id: `inv-${invoice.id}`,
-      reference: invoice.invoice_number,
-      customer: invoice.customer_name,
-      organization: invoice.organization || '-',
-      status: invoice.status,
-      amount: Number(invoice.total || 0),
-      timestamp: invoice.created_at,
-      actionLink: `/invoices/${invoice.id}/view`,
-      actionLabel: 'Open Invoice',
-    })),
-    [analytics.recent?.invoices]
-  );
-
-  const receiptActivityRows = useMemo(
-    () => (analytics.recent?.receipts || []).map((receipt) => ({
-      id: `rcp-${receipt.id}`,
-      reference: receipt.receipt_number,
-      invoiceRef: receipt.invoice?.invoice_number || '-',
-      customer: receipt.invoice?.customer_name || 'Unknown Customer',
-      method: PAYMENT_METHOD_LABELS[receipt.payment_method] || receipt.payment_method || '-',
-      amount: Number(receipt.amount_paid || 0),
-      timestamp: receipt.paid_at,
-      actionLink: receipt.receipt_url || '#',
-      downloadLink: receipt.receipt_pdf_url || '',
-      actionLabel: 'Open Receipt',
-      external: true,
-    })),
-    [analytics.recent?.receipts]
-  );
-
   if (loading) {
     return <div className="loading-state">Loading owner analytics...</div>;
   }
@@ -356,6 +304,13 @@ export default function OwnerDashboard() {
       <p className="owner-ops-sync-note">
         {refreshing ? 'Syncing latest invoices and receipts...' : `Last synced ${lastSync ? formatDateTime(lastSync) : 'just now'} · auto-refresh every 30 seconds`}
       </p>
+
+      <section className="owner-ops-quick-actions">
+        <Link to="/owner/operations/invoices" className="owner-ops-quick-link">Open Invoice Operations</Link>
+        <Link to="/owner/operations/payments" className="owner-ops-quick-link">Open Payment Desk</Link>
+        <Link to="/owner/admin-activity" className="owner-ops-quick-link">Review Admin Activity</Link>
+        <Link to="/owner/pdf-settings" className="owner-ops-quick-link">Manage PDF Settings</Link>
+      </section>
 
       <section className="owner-ops-top-grid">
         <article className="owner-ops-card owner-ops-card-gradient">
@@ -532,111 +487,6 @@ export default function OwnerDashboard() {
         </article>
       </section>
 
-      <section className="owner-ops-activity-grid">
-        <article className="owner-ops-card owner-ops-activity-card">
-          <div className="owner-ops-card-head">
-            <h3>Invoice Activity</h3>
-            <span className="owner-ops-card-tag">{invoiceActivityRows.length} records</span>
-          </div>
-
-          <div className="table-wrap owner-ops-activity-scroll">
-            <table className="table owner-ops-table">
-              <thead>
-                <tr>
-                  <th>Invoice #</th>
-                  <th>Customer</th>
-                  <th>Status</th>
-                  <th>Total</th>
-                  <th>Created</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoiceActivityRows.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="empty-state">No invoices recorded yet.</td>
-                  </tr>
-                ) : (
-                  invoiceActivityRows.map((row) => (
-                    <tr key={row.id}>
-                      <td>
-                        <strong>{row.reference}</strong>
-                        <span className="owner-ops-subtext">{row.organization}</span>
-                      </td>
-                      <td>{row.customer}</td>
-                      <td><span className={invoiceStatusChipClass(row.status)}>{row.status}</span></td>
-                      <td>{formatCurrency(row.amount)}</td>
-                      <td>{formatDateTime(row.timestamp)}</td>
-                      <td>
-                        <Link to={row.actionLink} className="owner-ops-action-link">
-                          {row.actionLabel}
-                        </Link>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </article>
-
-        <article className="owner-ops-card owner-ops-activity-card">
-          <div className="owner-ops-card-head">
-            <h3>Receipt Activity</h3>
-            <span className="owner-ops-card-tag">{receiptActivityRows.length} records</span>
-          </div>
-
-          <div className="table-wrap owner-ops-activity-scroll">
-            <table className="table owner-ops-table">
-              <thead>
-                <tr>
-                  <th>Receipt #</th>
-                  <th>Invoice #</th>
-                  <th>Customer</th>
-                  <th>Method</th>
-                  <th>Amount</th>
-                  <th>Paid</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {receiptActivityRows.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" className="empty-state">No receipts recorded yet.</td>
-                  </tr>
-                ) : (
-                  receiptActivityRows.map((row) => (
-                    <tr key={row.id}>
-                      <td><strong>{row.reference}</strong></td>
-                      <td>{row.invoiceRef}</td>
-                      <td>{row.customer}</td>
-                      <td><span className="owner-ops-chip neutral">{row.method}</span></td>
-                      <td>{formatCurrency(row.amount)}</td>
-                      <td>{formatDateTime(row.timestamp)}</td>
-                      <td>
-                        {row.external ? (
-                          <div className="owner-ops-action-group">
-                            <a href={row.actionLink} target="_blank" rel="noreferrer" className="owner-ops-action-link">
-                              {row.actionLabel}
-                            </a>
-                            {row.downloadLink ? (
-                              <a href={row.downloadLink} target="_blank" rel="noreferrer" className="owner-ops-action-link">
-                                Download PDF
-                              </a>
-                            ) : null}
-                          </div>
-                        ) : (
-                          <span>-</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </article>
-      </section>
     </div>
   );
 }

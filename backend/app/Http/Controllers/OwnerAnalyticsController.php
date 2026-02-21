@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Sale;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -204,9 +205,49 @@ class OwnerAnalyticsController extends Controller
             ->groupBy('payment_method')
             ->pluck('total', 'payment_method');
 
+        $adminInvoiceContributors = User::query()
+            ->where('role', 'admin')
+            ->withCount([
+                'createdInvoices as total_invoices_count',
+                'createdInvoices as pending_invoices_count' => fn ($query) => $query->where('status', Invoice::STATUS_PENDING),
+                'createdInvoices as due_invoices_count' => fn ($query) => $query->where('status', Invoice::STATUS_DUE),
+                'createdInvoices as completed_invoices_count' => fn ($query) => $query->where('status', Invoice::STATUS_COMPLETED),
+            ])
+            ->withSum([
+                'createdInvoices as outstanding_balance_total' => fn ($query) => $query
+                    ->where('status', '!=', Invoice::STATUS_COMPLETED),
+            ], 'balance_remaining')
+            ->withMax('createdInvoices as last_invoice_created_at', 'created_at')
+            ->orderByDesc('total_invoices_count')
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+                'email',
+                'is_active',
+            ])
+            ->map(fn (User $admin): array => [
+                'id' => $admin->id,
+                'name' => $admin->name,
+                'email' => $admin->email,
+                'is_active' => (bool) $admin->is_active,
+                'total_invoices' => (int) ($admin->total_invoices_count ?? 0),
+                'pending_invoices' => (int) ($admin->pending_invoices_count ?? 0),
+                'due_invoices' => (int) ($admin->due_invoices_count ?? 0),
+                'completed_invoices' => (int) ($admin->completed_invoices_count ?? 0),
+                'outstanding_balance' => round((float) ($admin->outstanding_balance_total ?? 0), 2),
+                'last_invoice_created_at' => $admin->last_invoice_created_at,
+            ])
+            ->values();
+
+        $unassignedInvoicesCount = Invoice::query()
+            ->whereNull('created_by_user_id')
+            ->count();
+
         $activityLimit = 250;
 
         $recentInvoices = Invoice::query()
+            ->with('creator:id,name,email,is_active')
             ->latest('created_at')
             ->take($activityLimit)
             ->get([
@@ -220,6 +261,7 @@ class OwnerAnalyticsController extends Controller
                 'total',
                 'amount_paid',
                 'balance_remaining',
+                'created_by_user_id',
                 'created_at',
             ]);
 
@@ -308,6 +350,10 @@ class OwnerAnalyticsController extends Controller
                     ['label' => 'Mobile Money', 'key' => 'mobile_money', 'value' => (int) ($paymentMethodCounts['mobile_money'] ?? 0)],
                     ['label' => 'Card', 'key' => 'card', 'value' => (int) ($paymentMethodCounts['card'] ?? 0)],
                 ],
+            ],
+            'team_activity' => [
+                'admins' => $adminInvoiceContributors,
+                'unassigned_invoices' => $unassignedInvoicesCount,
             ],
             'recent' => [
                 'invoices' => $recentInvoices,

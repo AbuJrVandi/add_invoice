@@ -12,8 +12,11 @@ const defaultFilters = {
   date: '',
 };
 
-function InvoiceList() {
+function InvoiceList({ mode = 'admin' }) {
   const { isMobile } = useResponsive();
+  const isOwnerMode = mode === 'owner';
+  const createPath = isOwnerMode ? '/owner/operations/invoices/create' : '/invoices/create';
+  const paymentPath = isOwnerMode ? '/owner/operations/payments' : '/payments';
   const [filters, setFilters] = useState(defaultFilters);
   const [draftFilters, setDraftFilters] = useState(defaultFilters);
   const [invoices, setInvoices] = useState([]);
@@ -107,8 +110,12 @@ function InvoiceList() {
     <div className="invoice-list-page stacked">
       <div className="invoice-list-header panel">
         <div>
-          <h1>Invoices</h1>
-          <p>Track issued invoices, balances, and payment readiness in one place.</p>
+          <h1>{isOwnerMode ? 'Owner Invoice Operations' : 'Invoices'}</h1>
+          <p>
+            {isOwnerMode
+              ? 'Create, monitor, and settle invoices with owner-level oversight.'
+              : 'Track issued invoices, balances, and payment readiness in one place.'}
+          </p>
           <small>
             {lastUpdated
               ? `Last updated ${lastUpdated.toLocaleTimeString()}`
@@ -120,7 +127,7 @@ function InvoiceList() {
           <button type="button" className="button button-outline" onClick={() => fetchInvoices(filters)}>
             Refresh
           </button>
-          <Link to="/invoices/create" className="button">
+          <Link to={createPath} className="button">
             + Create New Invoice
           </Link>
         </div>
@@ -165,6 +172,8 @@ function InvoiceList() {
           hasMore={hasMoreMobileRows}
           onLoadMore={() => setVisibleCount((prev) => prev + 10)}
           onDataChanged={() => fetchInvoices(filters)}
+          createPath={createPath}
+          paymentPath={paymentPath}
         />
       </div>
     </div>

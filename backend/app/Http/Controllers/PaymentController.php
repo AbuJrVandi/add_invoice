@@ -336,14 +336,14 @@ class PaymentController extends Controller
 
     private function scopeInvoicesForUser($query, ?User $user): void
     {
-        if (($user?->role ?? 'admin') === 'admin') {
+        if (in_array(($user?->role ?? 'admin'), ['admin', 'owner'], true)) {
             $query->where('created_by_user_id', $user?->id);
         }
     }
 
     private function scopePaymentsForUser($query, ?User $user): void
     {
-        if (($user?->role ?? 'admin') === 'admin') {
+        if (in_array(($user?->role ?? 'admin'), ['admin', 'owner'], true)) {
             $query->whereHas('invoice', function ($invoiceQuery) use ($user): void {
                 $invoiceQuery->where('created_by_user_id', $user?->id);
             });

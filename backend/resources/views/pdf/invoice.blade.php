@@ -424,6 +424,9 @@
     </table>
 
     <!-- ITEMS TABLE -->
+    @php
+        $formatAmount = static fn ($value): string => rtrim(rtrim(number_format((float) $value, 2, '.', ''), '0'), '.');
+    @endphp
     <table class="items">
         <thead>
             <tr>
@@ -440,8 +443,8 @@
                         <div class="item-title">{{ $item->description }}</div>
                     </td>
                     <td style="text-align:center;">{{ $item->quantity }}</td>
-                    <td class="t-right">{{ number_format((float) $item->unit_price, 2) }} LE</td>
-                    <td class="t-right">{{ number_format((float) $item->amount, 2) }} LE</td>
+                    <td class="t-right">{{ $formatAmount($item->unit_price) }} LE</td>
+                    <td class="t-right">{{ $formatAmount($item->amount) }} LE</td>
                 </tr>
             @endforeach
         </tbody>
@@ -452,15 +455,15 @@
         <table class="totals-table">
             <tr>
                 <td class="totals-label">SUB TOTAL</td>
-                <td class="totals-value">{{ number_format((float) $invoice->subtotal, 2) }} LE</td>
+                <td class="totals-value">{{ $formatAmount($invoice->subtotal) }} LE</td>
             </tr>
             <tr>
                 <td class="totals-label">DISCOUNT</td>
-                <td class="totals-value">{{ $invoice->tax > 0 ? '- ' . number_format((float) $invoice->tax, 2) . ' LE' : '0.00 LE' }}</td>
+                <td class="totals-value">{{ $invoice->tax > 0 ? '- ' . $formatAmount($invoice->tax) . ' LE' : '0 LE' }}</td>
             </tr>
             <tr class="total-row">
                 <td class="totals-label">TOTAL</td>
-                <td class="totals-value">{{ number_format((float) $invoice->total, 2) }} LE</td>
+                <td class="totals-value">{{ $formatAmount($invoice->total) }} LE</td>
             </tr>
         </table>
     </div>

@@ -22,6 +22,8 @@ function InvoiceTable({
   hasMore = false,
   onLoadMore = () => {},
   onDataChanged = () => {},
+  createPath = '/invoices/create',
+  paymentPath = '/payments',
 }) {
   const navigate = useNavigate();
   const { isMobile, isTablet } = useResponsive();
@@ -38,7 +40,7 @@ function InvoiceTable({
       event.stopPropagation();
       event.preventDefault();
     }
-    navigate(`/payments?invoice=${invoice.id}`);
+    navigate(`${paymentPath}?invoice=${invoice.id}`);
   };
 
   const handleEdit = (invoice, event) => {
@@ -46,7 +48,7 @@ function InvoiceTable({
       event.stopPropagation();
       event.preventDefault();
     }
-    navigate(`/invoices/create?clone=${invoice.id}`);
+    navigate(`${createPath}?clone=${invoice.id}`);
   };
 
   const handleDelete = async (invoice, event) => {

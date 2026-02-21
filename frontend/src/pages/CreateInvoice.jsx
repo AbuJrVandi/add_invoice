@@ -4,8 +4,11 @@ import InvoiceForm from '../components/InvoiceForm';
 import InvoicePreview from '../components/InvoicePreview';
 import api from '../services/api';
 
-function CreateInvoice() {
+function CreateInvoice({ mode = 'admin' }) {
   const navigate = useNavigate();
+  const isOwnerMode = mode === 'owner';
+  const listPath = isOwnerMode ? '/owner/operations/invoices' : '/invoices';
+  const pageTitle = isOwnerMode ? 'Owner Invoice Studio' : 'Create Invoice';
   const [searchParams] = useSearchParams();
   const cloneId = searchParams.get('clone');
   const [loading, setLoading] = useState(false);
@@ -162,7 +165,7 @@ function CreateInvoice() {
   if (createdInvoice) {
     return (
       <div className="stacked">
-        <h2>Create Invoice</h2>
+        <h2>{pageTitle}</h2>
         {error ? <p className="error panel">{error}</p> : null}
         <div className="panel success-card">
           <h3>Invoice Saved Successfully</h3>
@@ -174,7 +177,7 @@ function CreateInvoice() {
             <button type="button" className="button button-outline" onClick={handleDownloadCreatedPdf} disabled={pdfLoading}>
               {pdfLoading ? 'Preparing PDF...' : 'Download Again'}
             </button>
-            <button type="button" className="button button-outline" onClick={() => navigate('/invoices')}>
+            <button type="button" className="button button-outline" onClick={() => navigate(listPath)}>
               Go to Invoices
             </button>
             <button
@@ -211,7 +214,7 @@ function CreateInvoice() {
 
   return (
     <div className="stacked">
-      <h2>Create Invoice</h2>
+      <h2>{pageTitle}</h2>
       {error ? <p className="error panel">{error}</p> : null}
       {numberLoading ? (
         <p>Preparing invoice number...</p>

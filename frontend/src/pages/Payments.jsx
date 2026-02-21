@@ -4,8 +4,9 @@ import api from '../services/api';
 import PaymentModal from '../components/PaymentModal';
 import useResponsive from '../hooks/useResponsive';
 
-export default function Payments() {
+export default function Payments({ mode = 'admin' }) {
   const { isMobile, isTablet } = useResponsive();
+  const isOwnerMode = mode === 'owner';
   const [searchParams, setSearchParams] = useSearchParams();
   const [invoices, setInvoices] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -189,7 +190,7 @@ export default function Payments() {
   return (
     <div className="payments-page stacked">
       <div className="page-header">
-        <h1>Payments & Receipts</h1>
+        <h1>{isOwnerMode ? 'Owner Receipt Desk' : 'Payments & Receipts'}</h1>
         <div className="tabs">
           <button
             className={`tab ${activeTab === 'payments' ? 'active' : ''}`}
@@ -207,6 +208,12 @@ export default function Payments() {
           </button>
         </div>
       </div>
+
+      {isOwnerMode ? (
+        <div className="panel owner-payments-note">
+          <strong>Owner workflow:</strong> monitor all receipts, record payments, and download receipt PDFs.
+        </div>
+      ) : null}
 
       <div className="toolbar">
         <input

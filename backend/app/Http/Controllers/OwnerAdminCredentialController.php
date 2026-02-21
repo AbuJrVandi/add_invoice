@@ -2,18 +2,26 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Invoice;
+use App\Models\Payment;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class OwnerAdminCredentialController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        $owner = $request->user();
+
         $admins = User::query()
             ->where('role', 'admin')
+            ->where('managed_by_owner_id', $owner?->id)
             ->orderByDesc('created_at')
             ->get();
 
@@ -52,10 +60,8 @@ class OwnerAdminCredentialController extends Controller
 
     public function update(Request $request, User $user): JsonResponse
     {
-        if ($user->role !== 'admin') {
-            return response()->json([
-                'message' => 'Only admin accounts can be managed here.',
-            ], 422);
+        if ($response = $this->ensureManagedAdminForOwner($request, $user)) {
+            return $response;
         }
 
         $validated = $request->validate([
@@ -79,10 +85,8 @@ class OwnerAdminCredentialController extends Controller
 
     public function updatePassword(Request $request, User $user): JsonResponse
     {
-        if ($user->role !== 'admin') {
-            return response()->json([
-                'message' => 'Only admin accounts can be managed here.',
-            ], 422);
+        if ($response = $this->ensureManagedAdminForOwner($request, $user)) {
+            return $response;
         }
 
         $validated = $request->validate([
@@ -109,10 +113,8 @@ class OwnerAdminCredentialController extends Controller
 
     public function updateStatus(Request $request, User $user): JsonResponse
     {
-        if ($user->role !== 'admin') {
-            return response()->json([
-                'message' => 'Only admin accounts can be managed here.',
-            ], 422);
+        if ($response = $this->ensureManagedAdminForOwner($request, $user)) {
+            return $response;
         }
 
         $validated = $request->validate([
@@ -136,6 +138,73 @@ class OwnerAdminCredentialController extends Controller
                 ? 'Admin account activated successfully.'
                 : 'Admin account deactivated successfully.',
             'data' => $this->transformAdminCredentials($user->fresh()),
+        ]);
+    }
+
+    public function destroy(Request $request, User $user): JsonResponse
+    {
+        if ($response = $this->ensureManagedAdminForOwner($request, $user)) {
+            return $response;
+        }
+
+        $invoiceIds = Invoice::query()
+            ->where('created_by_user_id', $user->id)
+            ->pluck('id');
+
+        $paymentsQuery = Payment::query()->where('created_by', $user->id);
+        if ($invoiceIds->isNotEmpty()) {
+            $paymentsQuery->orWhereIn('invoice_id', $invoiceIds);
+        }
+
+        $paymentIds = $paymentsQuery->pluck('id');
+
+        $salesQuery = DB::table('sales');
+        if ($invoiceIds->isNotEmpty()) {
+            $salesQuery->whereIn('invoice_id', $invoiceIds);
+            if ($paymentIds->isNotEmpty()) {
+                $salesQuery->orWhereIn('payment_id', $paymentIds);
+            }
+        } elseif ($paymentIds->isNotEmpty()) {
+            $salesQuery->whereIn('payment_id', $paymentIds);
+        } else {
+            $salesQuery->whereRaw('1 = 0');
+        }
+
+        $saleCount = (clone $salesQuery)->count();
+        $invoiceCount = $invoiceIds->count();
+        $receiptCount = $paymentIds->count();
+
+        $invoicePdfPaths = Invoice::query()
+            ->whereIn('id', $invoiceIds)
+            ->whereNotNull('pdf_path')
+            ->pluck('pdf_path')
+            ->values();
+
+        DB::transaction(function () use ($user, $salesQuery, $paymentIds, $invoiceIds): void {
+            $salesQuery->delete();
+
+            if ($paymentIds->isNotEmpty()) {
+                Payment::query()->whereIn('id', $paymentIds)->delete();
+            }
+
+            if ($invoiceIds->isNotEmpty()) {
+                Invoice::query()->whereIn('id', $invoiceIds)->delete();
+            }
+
+            $user->tokens()->delete();
+            $user->delete();
+        });
+
+        $this->deleteStoredInvoicePdfs($invoicePdfPaths);
+
+        return response()->json([
+            'message' => 'Admin account and related records deleted successfully.',
+            'data' => [
+                'deleted_admin_id' => $user->id,
+                'deleted_invoices' => $invoiceCount,
+                'deleted_receipts' => $receiptCount,
+                'deleted_sales' => $saleCount,
+            ],
         ]);
     }
 
@@ -163,5 +232,47 @@ class OwnerAdminCredentialController extends Controller
             'created_at' => $admin->created_at?->toISOString(),
             'updated_at' => $admin->updated_at?->toISOString(),
         ];
+    }
+
+    private function ensureManagedAdminForOwner(Request $request, User $user): ?JsonResponse
+    {
+        if ($user->role !== 'admin') {
+            return response()->json([
+                'message' => 'Only admin accounts can be managed here.',
+            ], 422);
+        }
+
+        if ((int) ($user->managed_by_owner_id ?? 0) !== (int) ($request->user()?->id ?? 0)) {
+            return response()->json([
+                'message' => 'Admin account not found for this owner.',
+            ], 404);
+        }
+
+        return null;
+    }
+
+    private function deleteStoredInvoicePdfs(Collection $paths): void
+    {
+        if ($paths->isEmpty()) {
+            return;
+        }
+
+        $relativePaths = $paths
+            ->filter(fn ($path): bool => is_string($path) && trim($path) !== '')
+            ->map(function (string $path): string {
+                if (str_starts_with($path, 'storage/')) {
+                    return substr($path, strlen('storage/'));
+                }
+
+                return ltrim($path, '/');
+            })
+            ->filter(fn (string $path): bool => $path !== '')
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($relativePaths !== []) {
+            Storage::disk('public')->delete($relativePaths);
+        }
     }
 }

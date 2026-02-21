@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\OwnerAdminActivityController;
 use App\Http\Controllers\InvoicePdfSettingController;
 use App\Http\Controllers\OwnerAnalyticsController;
 use App\Http\Controllers\OwnerAdminCredentialController;
@@ -19,16 +20,22 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function (): void {
     Route::get('/dashboard', DashboardController::class);
+});
 
+Route::middleware(['auth:sanctum', 'role:owner'])->group(function (): void {
     Route::get('/pdf-settings', [InvoicePdfSettingController::class, 'show']);
     Route::post('/pdf-settings', [InvoicePdfSettingController::class, 'update']);
+});
 
+Route::middleware(['auth:sanctum', 'role:admin,owner'])->group(function (): void {
     // Invoice routes
     Route::get('/invoices/next-number', [InvoiceController::class, 'nextNumber']);
     Route::get('/invoices', [InvoiceController::class, 'index']);
     Route::post('/invoices/preview-pdf', [InvoiceController::class, 'previewPdf']);
     Route::post('/invoices', [InvoiceController::class, 'store']);
     Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy']);
+    Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'pdf']);
+    Route::get('/invoices/{invoice}', [InvoiceController::class, 'show']);
 
     // Payment routes
     Route::get('/payments/search-invoices', [PaymentController::class, 'searchInvoices']);
@@ -36,11 +43,6 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function (): void {
     Route::post('/payments', [PaymentController::class, 'store']);
     Route::get('/payments/{payment}', [PaymentController::class, 'show']);
     Route::get('/payments/{payment}/receipt/download', [PaymentController::class, 'receiptPdfDownload']);
-});
-
-Route::middleware(['auth:sanctum', 'role:admin,owner'])->group(function (): void {
-    Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'pdf']);
-    Route::get('/invoices/{invoice}', [InvoiceController::class, 'show']);
 });
 
 Route::prefix('owner')
@@ -54,6 +56,10 @@ Route::prefix('owner')
         Route::put('/admin-credentials/{user}', [OwnerAdminCredentialController::class, 'update']);
         Route::put('/admin-credentials/{user}/password', [OwnerAdminCredentialController::class, 'updatePassword']);
         Route::patch('/admin-credentials/{user}/status', [OwnerAdminCredentialController::class, 'updateStatus']);
+        Route::delete('/admin-credentials/{user}', [OwnerAdminCredentialController::class, 'destroy']);
+
+        Route::get('/admin-activity', [OwnerAdminActivityController::class, 'index']);
+        Route::get('/admin-activity/{user}', [OwnerAdminActivityController::class, 'show']);
     });
 
 Route::get('/payments/{payment}/receipt', [PaymentController::class, 'receipt'])

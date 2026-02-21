@@ -19,6 +19,10 @@ class OwnerAnalyticsTest extends TestCase
         $owner = User::factory()->create([
             'role' => 'owner',
         ]);
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'is_active' => true,
+        ]);
 
         $invoice = Invoice::query()->create([
             'invoice_number' => 'INV-TEST-0001',
@@ -34,6 +38,7 @@ class OwnerAnalyticsTest extends TestCase
             'status' => Invoice::STATUS_DUE,
             'amount_paid' => 40,
             'balance_remaining' => 60,
+            'created_by_user_id' => $admin->id,
         ]);
 
         $payment = Payment::query()->create([
@@ -71,11 +76,15 @@ class OwnerAnalyticsTest extends TestCase
                 'series',
                 'weekly_activity' => ['labels', 'invoices_created', 'receipts_issued', 'collected_cash'],
                 'distributions' => ['invoice_status', 'payment_methods'],
+                'team_activity' => ['admins', 'unassigned_invoices'],
                 'recent' => ['invoices', 'receipts'],
             ]);
 
         $this->assertNotEmpty($response->json('recent.invoices'));
         $this->assertNotEmpty($response->json('recent.receipts'));
+        $this->assertSame($admin->id, $response->json('recent.invoices.0.created_by_user_id'));
+        $this->assertSame($admin->name, $response->json('recent.invoices.0.creator.name'));
+        $this->assertSame(1, (int) $response->json('team_activity.admins.0.total_invoices'));
     }
 
     public function test_non_owner_cannot_access_owner_analytics(): void

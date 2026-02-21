@@ -427,7 +427,7 @@ class InvoiceController extends Controller
 
     private function scopeInvoicesForUser($query, ?User $user): void
     {
-        if (($user?->role ?? 'admin') === 'admin') {
+        if (in_array(($user?->role ?? 'admin'), ['admin', 'owner'], true)) {
             $query->where('created_by_user_id', $user?->id);
         }
     }

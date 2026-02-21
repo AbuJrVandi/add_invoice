@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function ReceiptViewer() {
   const { paymentId } = useParams();
+  const location = useLocation();
+  const { user } = useAuth();
   const iframeRef = useRef(null);
 
   const [receiptUrl, setReceiptUrl] = useState('');
@@ -13,6 +16,8 @@ export default function ReceiptViewer() {
   const [error, setError] = useState('');
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState('');
+  const ownerBackPath = location?.state?.backTo || '/owner/operations/payments';
+  const backPath = user?.role === 'owner' ? ownerBackPath : '/payments';
 
   useEffect(() => {
     const load = async () => {
@@ -118,7 +123,9 @@ export default function ReceiptViewer() {
         <h2>Receipt</h2>
         <p className="error panel">{error}</p>
         <div>
-          <Link className="button button-outline" to="/payments">Back to Payments</Link>
+          <Link className="button button-outline" to={backPath}>
+            {user?.role === 'owner' ? 'Back to Admin Activity' : 'Back to Payments'}
+          </Link>
         </div>
       </div>
     );
@@ -138,7 +145,7 @@ export default function ReceiptViewer() {
           <a href={receiptUrl} target="_blank" rel="noreferrer" className="button button-outline">
             Open in New Tab
           </a>
-          <Link className="button button-outline" to="/payments">Back</Link>
+          <Link className="button button-outline" to={backPath}>Back</Link>
         </div>
         {downloadError ? <p className="error">{downloadError}</p> : null}
       </div>

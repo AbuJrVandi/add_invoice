@@ -4,6 +4,15 @@ import useResponsive from '../hooks/useResponsive';
 const emptyItem = { description: '', quantity: 1, unit_price: 0, amount: 0 };
 const mobileSteps = ['Customer', 'Dates', 'Addresses', 'Items', 'Totals'];
 
+function formatNumberForDisplay(value) {
+  const numeric = Number(value || 0);
+  if (!Number.isFinite(numeric)) {
+    return '0';
+  }
+
+  return String(parseFloat(numeric.toFixed(2)));
+}
+
 function InvoiceForm({ onPreview, loading, invoiceNumber, initialData }) {
   const { isMobile } = useResponsive();
   const [mobileStep, setMobileStep] = useState(0);
@@ -189,7 +198,7 @@ function InvoiceForm({ onPreview, loading, invoiceNumber, initialData }) {
             <div className="stacked">
               {form.items.map((item, index) => (
                 <div className="item-row-mobile" key={`item-mobile-${index}`}>
-                  <label>Item Description</label>
+                  <label>Description</label>
                   <input
                     required
                     placeholder="Description"
@@ -198,7 +207,7 @@ function InvoiceForm({ onPreview, loading, invoiceNumber, initialData }) {
                   />
                   <div className="grid-2">
                     <div>
-                      <label>Quantity</label>
+                      <label>Qty</label>
                       <input
                         required
                         type="number"
@@ -209,7 +218,7 @@ function InvoiceForm({ onPreview, loading, invoiceNumber, initialData }) {
                       />
                     </div>
                     <div>
-                      <label>Unit Price</label>
+                      <label>Price</label>
                       <input
                         required
                         type="number"
@@ -223,7 +232,7 @@ function InvoiceForm({ onPreview, loading, invoiceNumber, initialData }) {
                   </div>
                   <div>
                     <label>Amount</label>
-                    <input readOnly value={Number(item.amount || 0).toFixed(2)} />
+                    <input readOnly value={formatNumberForDisplay(item.amount)} />
                   </div>
                   {form.items.length > 1 ? (
                     <button type="button" className="button button-outline" onClick={() => removeItem(index)}>Remove Item</button>
@@ -237,7 +246,7 @@ function InvoiceForm({ onPreview, loading, invoiceNumber, initialData }) {
           {mobileStep === 4 ? (
             <div className="stacked">
               <div className="totals-box totals-box-mobile">
-                <div>Subtotal: NLe {subtotal.toFixed(2)}</div>
+                <div>Subtotal: NLe {formatNumberForDisplay(subtotal)}</div>
                 <label>
                   Discount
                   <input
@@ -249,7 +258,7 @@ function InvoiceForm({ onPreview, loading, invoiceNumber, initialData }) {
                     inputMode="decimal"
                   />
                 </label>
-                <div className="total">Total: NLe {total.toFixed(2)}</div>
+                <div className="total">Total: NLe {formatNumberForDisplay(total)}</div>
               </div>
             </div>
           ) : null}
@@ -316,6 +325,13 @@ function InvoiceForm({ onPreview, loading, invoiceNumber, initialData }) {
 
       <div>
         <h3>Invoice Items</h3>
+        <div className="invoice-items-head">
+          <span>Description</span>
+          <span>Qty</span>
+          <span>Price</span>
+          <span>Amount</span>
+          <span>Action</span>
+        </div>
         {form.items.map((item, index) => (
           <div className="item-row" key={`item-${index}`}>
             <input
@@ -338,12 +354,12 @@ function InvoiceForm({ onPreview, loading, invoiceNumber, initialData }) {
               type="number"
               min="0"
               step="0.01"
-              placeholder="Unit Price"
+              placeholder="Price"
               value={item.unit_price}
               onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
               inputMode="decimal"
             />
-            <input readOnly value={Number(item.amount || 0).toFixed(2)} />
+            <input readOnly value={formatNumberForDisplay(item.amount)} />
             <button type="button" className="button button-outline" onClick={() => removeItem(index)}>Remove</button>
           </div>
         ))}
@@ -351,7 +367,7 @@ function InvoiceForm({ onPreview, loading, invoiceNumber, initialData }) {
       </div>
 
       <div className="totals-box">
-        <div>Subtotal: NLe {subtotal.toFixed(2)}</div>
+        <div>Subtotal: NLe {formatNumberForDisplay(subtotal)}</div>
         <label>
           Discount
           <input
@@ -363,7 +379,7 @@ function InvoiceForm({ onPreview, loading, invoiceNumber, initialData }) {
             inputMode="decimal"
           />
         </label>
-        <div className="total">Total: NLe {total.toFixed(2)}</div>
+        <div className="total">Total: NLe {formatNumberForDisplay(total)}</div>
       </div>
 
       {stepError ? <p className="error">{stepError}</p> : null}

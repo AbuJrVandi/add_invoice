@@ -6,11 +6,15 @@ import useResponsive from '../hooks/useResponsive';
 const PAGE_TITLES = {
   '/': 'Dashboard',
   '/owner/dashboard': 'Owner Analytics',
+  '/owner/operations/invoices': 'Owner Invoices',
+  '/owner/operations/invoices/create': 'Owner Invoice Studio',
+  '/owner/operations/payments': 'Owner Payments',
+  '/owner/pdf-settings': 'PDF Settings',
+  '/owner/admin-activity': 'Admin Activity',
   '/owner/admin-credentials': 'Admin Credentials',
   '/invoices': 'Invoices',
   '/invoices/create': 'Create Invoice',
   '/payments': 'Payments',
-  '/pdf-settings': 'PDF Settings',
 };
 
 function resolvePageTitle(pathname) {
@@ -29,11 +33,17 @@ function navConfigForRole(role) {
     return {
       sideNav: [
         { to: '/owner/dashboard', label: 'Analytics', icon: '📊', exact: true },
+        { to: '/owner/operations/invoices', label: 'Invoices', icon: '🧾' },
+        { to: '/owner/operations/payments', label: 'Payments', icon: '💳' },
+        { to: '/owner/admin-activity', label: 'Admin Activity', icon: '🧭' },
         { to: '/owner/admin-credentials', label: 'Admin Access', icon: '🛡️' },
+        { to: '/owner/pdf-settings', label: 'PDF Settings', icon: '⚙️' },
       ],
       mobileNav: [
         { to: '/owner/dashboard', label: 'Home', icon: '🏠', exact: true },
-        { to: '/owner/admin-credentials', label: 'Admins', icon: '👥' },
+        { to: '/owner/operations/invoices', label: 'Invoices', icon: '🧾' },
+        { to: '/owner/operations/payments', label: 'Payments', icon: '💳' },
+        { to: '/owner/admin-activity', label: 'Activity', icon: '🧭' },
       ],
     };
   }
@@ -43,13 +53,11 @@ function navConfigForRole(role) {
       { to: '/', label: 'Overview', icon: '📈', exact: true },
       { to: '/invoices', label: 'Invoices', icon: '🧾' },
       { to: '/payments', label: 'Payments', icon: '💳' },
-      { to: '/pdf-settings', label: 'PDF Settings', icon: '⚙️' },
     ],
     mobileNav: [
       { to: '/', label: 'Home', icon: '🏠', exact: true },
       { to: '/invoices', label: 'Invoices', icon: '🧾' },
       { to: '/payments', label: 'Payments', icon: '💳' },
-      { to: '/pdf-settings', label: 'Settings', icon: '⚙️' },
     ],
   };
 }
@@ -86,6 +94,9 @@ export default function ProtectedLayout() {
   const sideNav = nav.sideNav;
   const mobileNav = nav.mobileNav;
   const isSidebarOpen = !sidebarCollapsed;
+  const createInvoicePath = user?.role === 'owner'
+    ? '/owner/operations/invoices/create'
+    : '/invoices/create';
 
   if (isMobile) {
     return (
@@ -104,8 +115,8 @@ export default function ProtectedLayout() {
           <Outlet />
         </main>
 
-        {user?.role !== 'owner' && location.pathname !== '/invoices/create' ? (
-          <Link to="/invoices/create" className="mobile-fab" aria-label="Create Invoice">
+        {location.pathname !== createInvoicePath ? (
+          <Link to={createInvoicePath} className="mobile-fab" aria-label="Create Invoice">
             <span aria-hidden="true">＋</span>
             <strong>Create Invoice</strong>
           </Link>
